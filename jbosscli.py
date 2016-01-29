@@ -1,12 +1,12 @@
 #!/usr/bin/python
 import subprocess
+import json
 
 def invoke_cli(controller, command):
     process = subprocess.Popen(["/opt/jboss/bin/jboss-cli.sh", "--connect", "controller=%s"%controller, "--command=%s"%command], stdout=subprocess.PIPE)
     stdout = process.communicate()[0]
 
-    stdout = stdout.replace("=>", ":").replace("L", "") #I know. Silly.
-    result = json.loads(stdout)
+    result = parse_output(stdout)
 
     return result
 
@@ -23,3 +23,11 @@ def read_used_heap(controller):
 def restart(controller):
     command = ":shutdown(restart=true)"
     return invoke_cli(controller, command)
+
+def parse_output(output):
+    parsed = output.replace("=>", ":").replace("L", "") #I know. Silly.
+    return json.loads(stdout)
+
+def list_domain_hosts(controller):
+    command = "ls /host"
+    invoke_cli(controller, command)
