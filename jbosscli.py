@@ -3,16 +3,14 @@ import subprocess
 import json
 import logging
 
-logging.basicConfig(format="%(asctime)s [jbosscli] %(message)s",
-                        datefmt="%d/%m/%Y %H:%M:%S",
-                        level=logging.DEBUG)
+log = logging.getLogger("jbosscli")
 
 def invoke_cli(controller, command):
     process = subprocess.Popen(["/opt/jboss/bin/jboss-cli.sh", "--connect", "controller=%s"%controller, "--command=%s"%command], stdout=subprocess.PIPE)
-    logging.debug("Running on %s -> %s", controller, command)
+    log.debug("Running on %s -> %s", controller, command)
     stdout = process.communicate()[0]
-    logging.debug("Process executed with return code: %i", process.returncode)
-    logging.debug(stdout)
+    log.debug("Process executed with return code: %i", process.returncode)
+    log.debug(stdout)
 
     if (process.returncode > 0):
         raise CliError(stdout)
