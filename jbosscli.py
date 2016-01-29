@@ -5,7 +5,7 @@ import logging
 
 log = logging.getLogger("jbosscli")
 
-def invoke_cli(controller, command, parse_output=True):
+def invoke_cli(controller, command, should_parse_output=True):
     process = subprocess.Popen(["/opt/jboss/bin/jboss-cli.sh", "--connect", "controller=%s"%controller, "--command=%s"%command], stdout=subprocess.PIPE)
     log.debug("Running on %s -> %s", controller, command)
     stdout = process.communicate()[0]
@@ -15,7 +15,7 @@ def invoke_cli(controller, command, parse_output=True):
     if (process.returncode > 0):
         raise CliError(stdout)
 
-    if (parse_output):
+    if (should_parse_output):
         return parse_output(stdout)
     else:
         return stdout
