@@ -5,7 +5,7 @@ import logging
 
 log = logging.getLogger("jbosscli")
 
-def invoke_cli(controller, command):
+def invoke_cli(controller, command, parse_output=True):
     process = subprocess.Popen(["/opt/jboss/bin/jboss-cli.sh", "--connect", "controller=%s"%controller, "--command=%s"%command], stdout=subprocess.PIPE)
     log.debug("Running on %s -> %s", controller, command)
     stdout = process.communicate()[0]
@@ -15,9 +15,10 @@ def invoke_cli(controller, command):
     if (process.returncode > 0):
         raise CliError(stdout)
 
-    result = parse_output(stdout)
-
-    return result
+    if (parse_output):
+        return parse_output(stdout)
+    else:
+        return stdout
 
 def read_used_heap(controller):
     command = "/core-service=platform-mbean/type=memory:read-resource(include-runtime=true)"
@@ -39,7 +40,16 @@ def parse_output(output):
 
 def list_domain_hosts(controller):
     command = "ls /host"
-    invoke_cli(controller, command)
+    result = invoke_cli(controller, command, False)
+    hosts = result.split()
+    return hosts
+
+def list_servers(controller, host):
+    command = "ls /host=%s/server-config"%host
+    result = invoke_cli(controller, command, False)
+    servers = result.split()
+    return servers
+
 
 class CliError(Exception):
     def __init__(self, stdout):
