@@ -1,10 +1,21 @@
 #!/usr/bin/python
 import subprocess
 import json
+import logging
+
+logging.basicConfig(format="%(asctime)s [jbosscli] %(message)s",
+                        datefmt="%d/%m/%Y %H:%M:%S",
+                        level=logging.DEBUG)
 
 def invoke_cli(controller, command):
     process = subprocess.Popen(["/opt/jboss/bin/jboss-cli.sh", "--connect", "controller=%s"%controller, "--command=%s"%command], stdout=subprocess.PIPE)
+    logging.debug("Running on %s -> %s", controller, command)
     stdout = process.communicate()[0]
+    logging.debug("Process executed with return code: %i", process.returncode)
+    logging.debug(stdout)
+
+    if (process.returncode > 0):
+        raise CliError(stdout)
 
     result = parse_output(stdout)
 
@@ -26,8 +37,16 @@ def restart(controller):
 
 def parse_output(output):
     parsed = output.replace("=>", ":").replace("L", "") #I know. Silly.
-    return json.loads(stdout)
+    return json.loads(parsed)
 
 def list_domain_hosts(controller):
     command = "ls /host"
     invoke_cli(controller, command)
+
+class CliError(Exception):
+    def __init__(self, stdout):
+        self.stdout = stdout
+    def __str__(self):
+        return repr(self.stdout)
+
+
