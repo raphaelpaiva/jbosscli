@@ -20,19 +20,31 @@ def invoke_cli(controller, command, should_parse_output=True):
     else:
         return stdout
 
-def read_used_heap(controller):
-    command = "/core-service=platform-mbean/type=memory:read-resource(include-runtime=true)"
+def read_used_heap(controller, host=None, server=None):
+    command = ""
+    if (host and server):
+        command += "/host={0}/server={1}".format(host,server)
+    command += "/core-service=platform-mbean/type=memory:read-resource(include-runtime=true)"
 
     result = invoke_cli(controller, command)
 
-    used_heap = result['result']['heap-memory-usage']['used']
+    heap_memory_usage = result['result']['heap-memory-usage']
+
+    used_heap = heap_memory_usage['used']
     used_heap = float(used_heap)/1024/1024/1024
+    
+    max_heap = heap_memory_usage['max']
+    max_heap = float(max_heap)/1024/1024/1024
 
-    return used_heap
+    return (used_heap, max_heap)
 
-def restart(controller):
-    command = ":shutdown(restart=true)"
-    return invoke_cli(controller, command)
+def restart(controller, host=None, server=None):
+    if (host and server):
+        command = "/host={0}/server-config={1}:restart".format(host, server)
+        return invoke_cli(controller, command)
+    else:
+        command = ":shutdown(restart=true)"
+        return invoke_cli(controller, command)
 
 def parse_output(output):
     parsed = output.replace("=>", ":").replace("L", "") #I know. Silly.
