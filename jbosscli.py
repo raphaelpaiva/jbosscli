@@ -5,8 +5,8 @@ import logging
 
 log = logging.getLogger("jbosscli")
 
-def invoke_cli(controller, command, should_parse_output=True):
-    process = subprocess.Popen(["/opt/jboss/bin/jboss-cli.sh", "--connect", "controller=%s"%controller, "--command=%s"%command], stdout=subprocess.PIPE)
+def invoke_cli(controller, auth, command):
+    process = subprocess.Popen(["curl", "-s", "--digest", "http://{0}/management".format(controller), "--header", "Content-Type: application/json",  "-d", command, "-u", auth], stdout=subprocess.PIPE)
     log.debug("Running on %s -> %s", controller, command)
     stdout = process.communicate()[0]
     log.debug("Process executed with return code: %i", process.returncode)
@@ -15,18 +15,18 @@ def invoke_cli(controller, command, should_parse_output=True):
     if (process.returncode > 0):
         raise CliError(stdout)
 
-    if (should_parse_output):
-        return parse_output(stdout)
-    else:
-        return stdout
+    return json.loads(stdout)
 
-def read_used_heap(controller, host=None, server=None):
-    command = ""
+def read_used_heap(controller, auth, host=None, server=None):
+    command = '{{"operation":"read-resource", "include-runtime":"true", "address":[{0}"core-service", "platform-mbean", "type", "memory"]}}'
+    address = ""
+
     if (host and server):
-        command += "/host={0}/server={1}".format(host,server)
-    command += "/core-service=platform-mbean/type=memory:read-resource(include-runtime=true)"
+        address = '"host","{0}","server","{1}", '.format(host,server)
+   
+    command = command.format(address)
 
-    result = invoke_cli(controller, command)
+    result = invoke_cli(controller, auth, command)
 
     heap_memory_usage = result['result']['heap-memory-usage']
 
@@ -38,29 +38,35 @@ def read_used_heap(controller, host=None, server=None):
 
     return (used_heap, max_heap)
 
-def restart(controller, host=None, server=None):
+def restart(controller, auth, host=None, server=None):
+    command = '{{"operation":{0}{1}}}'
+    operation = ""
+    address = ""
+
     if (host and server):
-        command = "/host={0}/server-config={1}:restart".format(host, server)
-        return invoke_cli(controller, command)
+        address = ', "address": ["host", "{0}","server-config", "{1}"]'.format(host, server)
+        operation = 'restart'
     else:
-        command = ":shutdown(restart=true)"
-        return invoke_cli(controller, command)
+        operation = '"shutdown", "restart":"true"'
 
-def parse_output(output):
-    parsed = output.replace("=>", ":").replace("L", "") #I know. Silly.
-    return json.loads(parsed)
+    command = command.format(operation, address)
+    return invoke_cli(controller, auth, command)
 
-def list_domain_hosts(controller):
-    command = "ls /host"
-    result = invoke_cli(controller, command, False)
-    hosts = result.split()
+def list_domain_hosts(controller, auth):
+    command = '{"operation":"read-children-names", "child-type":"host"}'
+    result = invoke_cli(controller, auth, command)
+    hosts = result['result']
     return hosts
 
-def list_servers(controller, host):
-    command = "ls /host=%s/server-config"%host
-    result = invoke_cli(controller, command, False)
-    servers = result.split()
-    return servers
+def list_servers(controller, auth, host):
+    command = '{{"operation":"read-children-names", "child-type":"server", "address":["host","{0}"]}}'.format(host)
+    result = invoke_cli(controller, auth, command)
+
+    if result['outcome'] == "failed":
+        return []
+    else:
+        servers = result['result']
+        return servers
 
 
 class CliError(Exception):
