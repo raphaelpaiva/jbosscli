@@ -2,20 +2,19 @@
 import subprocess
 import json
 import logging
+import requests
 
 log = logging.getLogger("jbosscli")
 
 def invoke_cli(controller, auth, command):
-    process = subprocess.Popen(["curl", "-s", "--digest", "http://{0}/management".format(controller), "--header", "Content-Type: application/json",  "-d", command, "-u", auth], stdout=subprocess.PIPE)
-    log.debug("Running on %s -> %s", controller, command)
-    stdout = process.communicate()[0]
-    log.debug("Process executed with return code: %i", process.returncode)
+    url = "http://{0}/management".format(controller)
+    headers = {"Content-type":"application/json"}
+    credentials = auth.split(":")
+    r = requests.post(url, data=command, headers=headers, auth=requests.auth.HTTPDigestAuth(credentials[0], credentials[1]))
+    stdout = r.text
     log.debug(stdout)
 
-    if (process.returncode > 0):
-        raise CliError(stdout)
-
-    return json.loads(stdout)
+    return r.json()
 
 def read_used_heap(controller, auth, host=None, server=None):
     command = '{{"operation":"read-resource", "include-runtime":"true", "address":[{0}"core-service", "platform-mbean", "type", "memory"]}}'
@@ -23,7 +22,7 @@ def read_used_heap(controller, auth, host=None, server=None):
 
     if (host and server):
         address = '"host","{0}","server","{1}", '.format(host,server)
-   
+
     command = command.format(address)
 
     result = invoke_cli(controller, auth, command)
@@ -32,7 +31,7 @@ def read_used_heap(controller, auth, host=None, server=None):
 
     used_heap = heap_memory_usage['used']
     used_heap = float(used_heap)/1024/1024/1024
-    
+
     max_heap = heap_memory_usage['max']
     max_heap = float(max_heap)/1024/1024/1024
 
@@ -74,5 +73,3 @@ class CliError(Exception):
         self.stdout = stdout
     def __str__(self):
         return repr(self.stdout)
-
-
