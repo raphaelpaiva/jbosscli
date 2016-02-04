@@ -18,7 +18,7 @@ def invoke_cli(controller, auth, command):
     log.debug("Finished request with response code: %i", r.status_code)
     log.debug("Request body:\n%s", r.text)
 
-    if (r.status_code >= 400):
+    if (r.status_code >= 400 and not r.text):
         raise CliError("Request responded a {0} code".format(r.status_code))
 
     return r.json()
