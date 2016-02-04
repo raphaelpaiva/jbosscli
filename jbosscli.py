@@ -10,9 +10,16 @@ def invoke_cli(controller, auth, command):
     url = "http://{0}/management".format(controller)
     headers = {"Content-type":"application/json"}
     credentials = auth.split(":")
+
+    log.debug("Requesting %s -> %s", controller, command)
+
     r = requests.post(url, data=command, headers=headers, auth=requests.auth.HTTPDigestAuth(credentials[0], credentials[1]))
-    stdout = r.text
-    log.debug(stdout)
+
+    log.debug("Finished request with response code: %i", r.status_code)
+    log.debug("Request body:\n%s", r.text)
+
+    if (r.status_code >= 400):
+        raise CliError("Request responded a {0} code".format(r.status_code))
 
     return r.json()
 
@@ -69,7 +76,7 @@ def list_servers(controller, auth, host):
 
 
 class CliError(Exception):
-    def __init__(self, stdout):
-        self.stdout = stdout
+    def __init__(self, msg):
+        self.msg = msg
     def __str__(self):
-        return repr(self.stdout)
+        return repr(self.msg)
