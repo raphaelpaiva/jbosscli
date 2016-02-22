@@ -33,6 +33,9 @@ def read_used_heap(controller, auth, host=None, server=None):
 
     result = invoke_cli(controller, auth, command)
 
+    if 'result' not in result:
+        raise CliError(result)
+
     heap_memory_usage = result['result']['heap-memory-usage']
 
     used_heap = heap_memory_usage['used']
