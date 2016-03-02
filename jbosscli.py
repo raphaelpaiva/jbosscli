@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 import json
 import logging
 import requests
@@ -33,7 +34,7 @@ def read_used_heap(controller, auth, host=None, server=None):
 
     result = invoke_cli(controller, auth, command)
 
-    if 'result' not in result:
+    if result['outcome'] != "success":
         raise CliError(result)
 
     result = result['result']
