@@ -6,119 +6,123 @@ import requests
 
 log = logging.getLogger("jbosscli")
 
-def invoke_cli(controller, auth, command):
-    url = "http://{0}/management".format(controller)
-    headers = {"Content-type":"application/json"}
-    credentials = auth.split(":")
+class Jbosscli(object):
+    def __init__(self, controller, auth):
+        self.controller = controller
+        self.credentials = auth.split(":")
 
-    log.debug("Requesting %s -> %s", controller, command)
+    def _invoke_cli(self, command):
+        url = "http://{0}/management".format(self.controller)
+        headers = {"Content-type":"application/json"}
 
-    r = requests.post(url, data=command, headers=headers, auth=requests.auth.HTTPDigestAuth(credentials[0], credentials[1]))
+        log.debug("Requesting %s -> %s", self.controller, command)
 
-    log.debug("Finished request with response code: %i", r.status_code)
-    log.debug("Request body:\n%s", r.text)
+        r = requests.post(url, data=command, headers=headers, auth=requests.auth.HTTPDigestAuth(self.credentials[0], self.credentials[1]))
 
-    if (r.status_code >= 400 and not r.text):
-        raise CliError("Request responded a {0} code".format(r.status_code))
+        log.debug("Finished request with response code: %i", r.status_code)
+        log.debug("Request body:\n%s", r.text)
 
-    return r.json()
+        if (r.status_code >= 400 and not r.text):
+            raise CliError("Request responded a {0} code".format(r.status_code))
 
-def read_used_heap(controller, auth, host=None, server=None):
-    command = '{{"operation":"read-resource", "include-runtime":"true", "address":[{0}"core-service", "platform-mbean", "type", "memory"]}}'
-    address = ""
+        return r.json()
 
-    if (host and server):
-        address = '"host","{0}","server","{1}", '.format(host,server)
+    def read_used_heap(self, host=None, server=None):
+        command = '{{"operation":"read-resource", "include-runtime":"true", "address":[{0}"core-service", "platform-mbean", "type", "memory"]}}'
+        address = ""
 
-    command = command.format(address)
+        if (host and server):
+            address = '"host","{0}","server","{1}", '.format(host,server)
 
-    result = invoke_cli(controller, auth, command)
+        command = command.format(address)
 
-    if result['outcome'] != "success":
-        raise CliError(result)
+        result = self._invoke_cli(command)
 
-    result = result['result']
+        if result['outcome'] != "success":
+            raise CliError(result)
 
-    if 'heap-memory-usage' not in result:
-        raise CliError(result)
-
-    heap_memory_usage = result['heap-memory-usage']
-
-    used_heap = heap_memory_usage['used']
-    used_heap = float(used_heap)/1024/1024/1024
-
-    max_heap = heap_memory_usage['max']
-    max_heap = float(max_heap)/1024/1024/1024
-
-    return (used_heap, max_heap)
-
-def restart(controller, auth, host=None, server=None):
-    command = '{{"operation":{0}{1}}}'
-    operation = ""
-    address = ""
-
-    if (host and server):
-        address = ', "address": ["host", "{0}","server-config", "{1}"]'.format(host, server)
-        operation = 'restart'
-    else:
-        operation = '"shutdown", "restart":"true"'
-
-    command = command.format(operation, address)
-    return invoke_cli(controller, auth, command)
-
-def list_domain_hosts(controller, auth):
-    command = '{"operation":"read-children-names", "child-type":"host"}'
-    result = invoke_cli(controller, auth, command)
-    hosts = result['result']
-    return hosts
-
-def list_servers(controller, auth, host):
-    command = '{{"operation":"read-children-names", "child-type":"server", "address":["host","{0}"]}}'.format(host)
-    result = invoke_cli(controller, auth, command)
-
-    if result['outcome'] == "failed":
-        return []
-    else:
-        servers = result['result']
-        return servers
-
-def list_server_groups(controller, auth):
-    command = '{"operation":"read-children-names","child-type":"server-group"}'
-
-    result = invoke_cli(controller, auth, command)
-
-    if result['outcome'] == "failed":
-        return []
-    else:
-        groups = result['result']
-        return groups
-
-def get_server_groups(controller, auth):
-    result = list_server_groups(controller, auth)
-
-    groups = []
-
-    for item in result:
-        deployments = get_deployments(controller, auth, item)
-        group = ServerGroup(item, deployments)
-        groups.append(group)
-
-    return groups
-
-def get_deployments(controller, auth, server_group):
-    command = '{{"operation":"read-children-resources", "child-type":"deployment", "address":["server-group","{0}"]}}'.format(server_group)
-    result = invoke_cli(controller, auth, command)
-
-    deployments = []
-
-    if result['outcome'] != "failed":
         result = result['result']
 
-        for item in result.values():
-            deployment = Deployment(item['name'], item['runtime-name'], item['enabled'])
-            deployments.append(deployment)
+        if 'heap-memory-usage' not in result:
+            raise CliError(result)
 
-    return deployments
+        heap_memory_usage = result['heap-memory-usage']
+
+        used_heap = heap_memory_usage['used']
+        used_heap = float(used_heap)/1024/1024/1024
+
+        max_heap = heap_memory_usage['max']
+        max_heap = float(max_heap)/1024/1024/1024
+
+        return (used_heap, max_heap)
+
+    def restart(self, host=None, server=None):
+        command = '{{"operation":{0}{1}}}'
+        operation = ""
+        address = ""
+
+        if (host and server):
+            address = ', "address": ["host", "{0}","server-config", "{1}"]'.format(host, server)
+            operation = 'restart'
+        else:
+            operation = '"shutdown", "restart":"true"'
+
+        command = command.format(operation, address)
+        return self._invoke_cli(command)
+
+    def list_domain_hosts(self):
+        command = '{"operation":"read-children-names", "child-type":"host"}'
+        result = self._invoke_cli(command)
+        hosts = result['result']
+        return hosts
+
+    def list_servers(self, host):
+        command = '{{"operation":"read-children-names", "child-type":"server", "address":["host","{0}"]}}'.format(host)
+        result = self._invoke_cli(command)
+
+        if result['outcome'] == "failed":
+            return []
+        else:
+            servers = result['result']
+            return servers
+
+    def list_server_groups(self):
+        command = '{"operation":"read-children-names","child-type":"server-group"}'
+
+        result = self._invoke_cli(command)
+
+        if result['outcome'] == "failed":
+            return []
+        else:
+            groups = result['result']
+            return groups
+
+    def get_server_groups(self):
+        result = self.list_server_groups()
+
+        groups = []
+
+        for item in result:
+            deployments = self.get_deployments(item)
+            group = ServerGroup(item, deployments)
+            groups.append(group)
+
+        return groups
+
+    def get_deployments(self, server_group):
+        command = '{{"operation":"read-children-resources", "child-type":"deployment", "address":["server-group","{0}"]}}'.format(server_group)
+        result = self._invoke_cli(command)
+
+        deployments = []
+
+        if result['outcome'] != "failed":
+            result = result['result']
+
+            for item in result.values():
+                deployment = Deployment(item['name'], item['runtime-name'], item['enabled'])
+                deployments.append(deployment)
+
+        return deployments
 
 class CliError(Exception):
     def __init__(self, msg):
