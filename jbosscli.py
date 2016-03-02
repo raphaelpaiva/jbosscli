@@ -82,9 +82,61 @@ def list_servers(controller, auth, host):
         servers = result['result']
         return servers
 
+def list_server_groups(controller, auth):
+    command = '{"operation":"read-children-names","child-type":"server-group"}'
+
+    result = invoke_cli(controller, auth, command)
+
+    if result['outcome'] == "failed":
+        return []
+    else:
+        groups = result['result']
+        return groups
+
+def get_server_groups(controller, auth):
+    result = list_server_groups(controller, auth)
+
+    groups = []
+
+    for item in result:
+        deployments = get_deployments(controller, auth, item)
+        group = ServerGroup(item, deployments)
+        groups.append(group)
+
+    return groups
+
+def get_deployments(controller, auth, server_group):
+    command = '{{"operation":"read-children-resources", "child-type":"deployment", "address":["server-group","{0}"]}}'.format(server_group)
+    result = invoke_cli(controller, auth, command)
+
+    deployments = []
+
+    if result['outcome'] != "failed":
+        result = result['result']
+
+        for item in result.values():
+            deployment = Deployment(item['name'], item['runtime-name'], item['enabled'])
+            deployments.append(deployment)
+
+    return deployments
 
 class CliError(Exception):
     def __init__(self, msg):
         self.msg = msg
     def __str__(self):
         return repr(self.msg)
+
+class Deployment:
+    def __init__(self, name, runtime_name, enabled):
+        self.name = name
+        self.runtime_name = runtime_name
+        self.enabled = enabled
+    def __str__(self):
+        return "{0} - {1} - {2}".format(self.name, self.runtime_name, 'enabled' if self.enabled else 'disabled')
+
+class ServerGroup:
+    def __init__(self, name, deployments):
+        self.name = name
+        self.deployments = deployments
+    def __str__(self):
+        return repr(self.name)
