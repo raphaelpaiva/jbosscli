@@ -36,7 +36,12 @@ def read_used_heap(controller, auth, host=None, server=None):
     if 'result' not in result:
         raise CliError(result)
 
-    heap_memory_usage = result['result']['heap-memory-usage']
+    result = result['result']
+
+    if 'heap-memory-usage' not in result:
+        raise CliError(result)
+
+    heap_memory_usage = result['heap-memory-usage']
 
     used_heap = heap_memory_usage['used']
     used_heap = float(used_heap)/1024/1024/1024
