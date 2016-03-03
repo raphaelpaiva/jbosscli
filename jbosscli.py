@@ -25,7 +25,15 @@ class Jbosscli(object):
         if (r.status_code >= 400 and not r.text):
             raise CliError("Request responded a {0} code".format(r.status_code))
 
-        return r.json()
+        response = r.json()
+
+        if 'outcome' not in response:
+            raise CliError("Unknown error: {0}".format(r.text), response)
+
+        if response['outcome'] != "success":
+            raise CliError(response['failure-description'], response)
+
+        return response
 
     def read_used_heap(self, host=None, server=None):
         command = '{{"operation":"read-resource", "include-runtime":"true", "address":[{0}"core-service", "platform-mbean", "type", "memory"]}}'
@@ -125,8 +133,9 @@ class Jbosscli(object):
         return deployments
 
 class CliError(Exception):
-    def __init__(self, msg):
+    def __init__(self, msg, raw=None):
         self.msg = msg
+        self.raw = raw if raw else self.msg
     def __str__(self):
         return repr(self.msg)
 
