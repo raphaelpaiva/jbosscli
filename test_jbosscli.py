@@ -12,6 +12,7 @@ class TestJbosscli(unittest.TestCase):
         expected_json_response = {"outcome" : "success"}
         mocked_response = Struct(status_code=200, text=None, json=MagicMock(return_value=expected_json_response))
         jbosscli.requests.post = MagicMock(return_value=mocked_response)
+        jbosscli.Jbosscli._read_attributes = MagicMock()
 
         actual_json_response = Jbosscli("", "a:b")._invoke_cli("")
         self.assertEqual(actual_json_response, expected_json_response)

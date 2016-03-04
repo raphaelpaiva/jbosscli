@@ -10,6 +10,25 @@ class Jbosscli(object):
     def __init__(self, controller, auth):
         self.controller = controller
         self.credentials = auth.split(":")
+        self._read_attributes()
+
+    def _read_attributes(self):
+        result = self._invoke_cli('{"operation":"read-resource"}')
+
+        result = result['result']
+
+        self.management_major_version = result['management-major-version']
+        self.management_micro_version = result['management-micro-version']
+        self.management_minor_version = result['management-minor-version']
+        self.name = result['name']
+        self.product_name = result['product-name']
+        self.product_version = result['product-version']
+        self.release_codename = result['release-codename']
+        self.release_version = result['release-version']
+
+        result = self._invoke_cli('{"operation":"read-attribute", "name":"launch-type"}')
+
+        self.domain = result['result'] == "DOMAIN"
 
     def _invoke_cli(self, command):
         url = "http://{0}/management".format(self.controller)
