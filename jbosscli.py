@@ -159,10 +159,11 @@ class CliError(Exception):
         return repr(self.msg)
 
 class Deployment:
-    def __init__(self, name, runtime_name, enabled):
+    def __init__(self, name, runtime_name, enabled=False, path=None):
         self.name = name
         self.runtime_name = runtime_name
         self.enabled = enabled
+        self.path = path
     def __str__(self):
         return "{0} - {1} - {2}".format(self.name, self.runtime_name, 'enabled' if self.enabled else 'disabled')
 
