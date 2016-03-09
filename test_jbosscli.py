@@ -73,6 +73,42 @@ class TestJbosscli(unittest.TestCase):
 
         self.assertEqual(len(groups), 0)
 
+    def test_get_deployments_standalone_should_not_include_path_in_command(self):
+        jbosscli.Jbosscli._read_attributes = MagicMock()
+        jbosscli.Jbosscli._invoke_cli = MagicMock()
+        controller = Jbosscli("", "a:b")
+        controller.domain = False
+
+        controller.get_deployments()
+
+        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources", "child-type":"deployment"}')
+
+    def test_get_deployments_domain_should_include_path_in_command(self):
+        jbosscli.Jbosscli._read_attributes = MagicMock()
+        jbosscli.Jbosscli._invoke_cli = MagicMock()
+        controller = Jbosscli("", "a:b")
+        controller.domain = True
+
+        group = jbosscli.ServerGroup("test-server-group", [])
+
+        controller.get_deployments(group)
+
+        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources", "child-type":"deployment", "address":["server-group","test-server-group"]}')
+
+    def test_get_deployments_domain_None_as_argument_should_raise_cli_error(self):
+        jbosscli.Jbosscli._read_attributes = MagicMock()
+        jbosscli.Jbosscli._invoke_cli = MagicMock()
+        controller = Jbosscli("", "a:b")
+        controller.domain = True
+
+        with self.assertRaises(CliError) as cm:
+            controller.get_deployments()
+
+        clierror = cm.exception
+        expected_msg = "For domain controllers, specify which server group to get deployments from, or use server-group.deployments."
+        self.assertEqual(clierror.msg, expected_msg)
+        self.assertEqual(clierror.raw, expected_msg)
+
 class Struct(object):
     def __init__(self, **kwds):
         self.__dict__.update(kwds)

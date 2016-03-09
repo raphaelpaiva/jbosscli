@@ -139,8 +139,19 @@ class Jbosscli(object):
 
         return groups
 
-    def get_deployments(self, server_group):
-        command = '{{"operation":"read-children-resources", "child-type":"deployment", "address":["server-group","{0}"]}}'.format(server_group)
+    def get_deployments(self, server_group=None):
+        if (self.domain and not server_group):
+            raise CliError("For domain controllers, specify which server group to get deployments from, or use server-group.deployments.")
+
+        command = '{{"operation":"read-children-resources", "child-type":"deployment"{0}}}'
+
+        server_group_name = server_group if (type(server_group) is str or server_group is None) else server_group.name
+
+        if (self.domain):
+            command = command.format(', "address":["server-group","{0}"]'.format(server_group_name))
+        else:
+            command = command.format("")
+
         result = self._invoke_cli(command)
 
         deployments = []
