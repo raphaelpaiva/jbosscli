@@ -55,6 +55,24 @@ class TestJbosscli(unittest.TestCase):
         self.assertEqual(clierror.msg, "Unknown error: Parser error")
         self.assertEqual(clierror.raw, "Parser error")
 
+    def test_get_server_groups_standalone_should_return_empty_list(self):
+        jbosscli.Jbosscli._read_attributes = MagicMock()
+        controller = Jbosscli("", "a:b")
+        controller.domain = False
+
+        groups = controller.get_server_groups()
+
+        self.assertEqual(len(groups), 0)
+
+    def test_list_server_groups_standalone_should_return_empty_list(self):
+        jbosscli.Jbosscli._read_attributes = MagicMock()
+        controller = Jbosscli("", "a:b")
+        controller.domain = False
+
+        groups = controller.list_server_groups()
+
+        self.assertEqual(len(groups), 0)
+
 class Struct(object):
     def __init__(self, **kwds):
         self.__dict__.update(kwds)

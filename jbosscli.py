@@ -114,6 +114,9 @@ class Jbosscli(object):
             return servers
 
     def list_server_groups(self):
+        if (not self.domain):
+            return []
+
         command = '{"operation":"read-children-names","child-type":"server-group"}'
 
         result = self._invoke_cli(command)
