@@ -141,11 +141,11 @@ class Jbosscli(object):
 
     def get_deployments(self, server_group=None):
         if (self.domain and not server_group):
-            raise CliError("For domain controllers, specify which server group to get deployments from, or use server-group.deployments.")
+            return self._get_all_deployments()
 
         command = '{{"operation":"read-children-resources", "child-type":"deployment"{0}}}'
 
-        server_group_name = server_group if (type(server_group) is str or server_group is None) else server_group.name
+        server_group_name = server_group.name if (server_group.__class__.__name__ is 'ServerGroup') else server_group
 
         if (self.domain):
             command = command.format(', "address":["server-group","{0}"]'.format(server_group_name))
@@ -162,6 +162,15 @@ class Jbosscli(object):
             for item in result.values():
                 deployment = Deployment(item['name'], item['runtime-name'], item['enabled'])
                 deployments.append(deployment)
+
+        return deployments
+
+    def _get_all_deployments(self):
+        groups = self.get_server_groups()
+        deployments = []
+
+        for group in groups:
+            deployments.extend(group.deployments)
 
         return deployments
 
