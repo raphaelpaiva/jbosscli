@@ -160,7 +160,7 @@ class Jbosscli(object):
             result = result['result']
 
             for item in result.values():
-                deployment = Deployment(item['name'], item['runtime-name'], item['enabled'])
+                deployment = Deployment(item['name'], item['runtime-name'], item['enabled'], server_group=server_group)
                 deployments.append(deployment)
 
         return deployments
@@ -182,11 +182,12 @@ class CliError(Exception):
         return repr(self.msg)
 
 class Deployment:
-    def __init__(self, name, runtime_name, enabled=False, path=None):
+    def __init__(self, name, runtime_name, enabled=False, path=None, server_group=None):
         self.name = name
         self.runtime_name = runtime_name
         self.enabled = enabled
         self.path = path
+        self.server_group = server_group
     def __str__(self):
         return "{0} - {1} - {2}".format(self.name, self.runtime_name, 'enabled' if self.enabled else 'disabled')
 
