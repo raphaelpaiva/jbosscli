@@ -90,7 +90,7 @@ class Jbosscli(object):
 
         if (host and server):
             address = ', "address": ["host", "{0}","server-config", "{1}"]'.format(host, server)
-            operation = 'restart'
+            operation = '"restart"'
         else:
             operation = '"shutdown", "restart":"true"'
 
