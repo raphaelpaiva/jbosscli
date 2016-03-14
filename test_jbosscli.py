@@ -95,19 +95,6 @@ class TestJbosscli(unittest.TestCase):
 
         jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources", "child-type":"deployment", "address":["server-group","test-server-group"]}')
 
-    def test_get_deployments_domain_None_as_argument_should_raise_cli_error(self):
-        jbosscli.Jbosscli._read_attributes = MagicMock()
-        jbosscli.Jbosscli._invoke_cli = MagicMock()
-        controller = Jbosscli("", "a:b")
-        controller.domain = True
-
-        with self.assertRaises(CliError) as cm:
-            controller.get_deployments()
-
-        clierror = cm.exception
-        expected_msg = "For domain controllers, specify which server group to get deployments from, or use server-group.deployments."
-        self.assertEqual(clierror.msg, expected_msg)
-        self.assertEqual(clierror.raw, expected_msg)
 
 class Struct(object):
     def __init__(self, **kwds):
