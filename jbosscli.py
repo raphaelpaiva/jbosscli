@@ -179,20 +179,39 @@ class Jbosscli(object):
         return deployments
 
     def list_datasources(self):
-        command = '{{"operation":"read-children-names","child-type":"data-source","address":[{0}"subsystem","datasources"]}}'
+        command = '{{"operation":"read-children-resources","child-type":"data-source","address":[{0}"subsystem","datasources"]}}'
 
         if(not self.domain):
             command = command.format("")
             response = self._invoke_cli(command)
-            return {'default': response['result']}
+            datasources = response['result']
+
+            enabled_datasources = self._filter_enabled_datasources(datasources)
+            return {'default': enabled_datasources}
         else:
             datasources_by_profile = {}
             for profile in self.profiles:
                 address = '"profile","{0}",'.format(profile)
                 response = self._invoke_cli(command.format(address))
-                datasources_by_profile[profile] = response['result']
+                datasources = response['result']
+                datasources_by_profile[profile] = self._filter_enabled_datasources(datasources)
 
             return datasources_by_profile
+
+    def _filter_enabled_datasources(self, datasources):
+        enabled_datasources = {}
+
+        for key, value in datasources.iteritems():
+            if value['enabled']:
+                enabled_datasources[key] = value
+
+        return enabled_datasources
+
+    def read_datasource_statistics(self, datasource):
+        command = '{{"operation":"read-resource","include-runtime":"true","address":["subsystem","datasources","data-source","{0}","statistics","pool"]}}'.format(datasource)
+
+        response = self._invoke_cli(command)
+        return response['result']
 
 
 class CliError(Exception):

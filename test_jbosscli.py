@@ -103,7 +103,7 @@ class TestJbosscli(unittest.TestCase):
 
         controller.list_datasources()
 
-        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-names","child-type":"data-source","address":["subsystem","datasources"]}')
+        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources","child-type":"data-source","address":["subsystem","datasources"]}')
 
     def test_list_datasources_domain(self):
         jbosscli.Jbosscli._read_attributes = MagicMock()
@@ -114,7 +114,7 @@ class TestJbosscli(unittest.TestCase):
 
         controller.list_datasources()
 
-        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-names","child-type":"data-source","address":["profile","test-profile","subsystem","datasources"]}')
+        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources","child-type":"data-source","address":["profile","test-profile","subsystem","datasources"]}')
 
 
 class Struct(object):
