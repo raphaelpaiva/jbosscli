@@ -26,9 +26,13 @@ class Jbosscli(object):
         self.release_codename = result['release-codename']
         self.release_version = result['release-version']
 
-        result = self._invoke_cli('{"operation":"read-attribute", "name":"launch-type"}')
+        launch_type_result = self._invoke_cli('{"operation":"read-attribute", "name":"launch-type"}')
+        self.domain = launch_type_result['result'] == "DOMAIN"
 
-        self.domain = result['result'] == "DOMAIN"
+        if (self.domain):
+            self.profiles = list(result['profile'].keys())
+        else:
+            self.profiles = ["default"]
 
     def _invoke_cli(self, command):
         url = "http://{0}/management".format(self.controller)
@@ -173,6 +177,23 @@ class Jbosscli(object):
             deployments.extend(group.deployments)
 
         return deployments
+
+    def list_datasources(self):
+        command = '{{"operation":"read-children-names","child-type":"data-source","address":[{0}"subsystem","datasources"]}}'
+
+        if(not self.domain):
+            command = command.format("")
+            response = self._invoke_cli(command)
+            return {'default': response['result']}
+        else:
+            datasources_by_profile = {}
+            for profile in self.profiles:
+                address = '"profile","{0}",'.format(profile)
+                response = self._invoke_cli(command.format(address))
+                datasources_by_profile[profile] = response['result']
+
+            return datasources_by_profile
+
 
 class CliError(Exception):
     def __init__(self, msg, raw=None):

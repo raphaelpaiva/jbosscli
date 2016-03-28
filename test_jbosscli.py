@@ -95,6 +95,27 @@ class TestJbosscli(unittest.TestCase):
 
         jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources", "child-type":"deployment", "address":["server-group","test-server-group"]}')
 
+    def test_list_datasources_standalone(self):
+        jbosscli.Jbosscli._read_attributes = MagicMock()
+        jbosscli.Jbosscli._invoke_cli = MagicMock()
+        controller = Jbosscli("", "a:b")
+        controller.domain = False
+
+        controller.list_datasources()
+
+        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-names","child-type":"data-source","address":["subsystem","datasources"]}')
+
+    def test_list_datasources_domain(self):
+        jbosscli.Jbosscli._read_attributes = MagicMock()
+        jbosscli.Jbosscli._invoke_cli = MagicMock()
+        controller = Jbosscli("", "a:b")
+        controller.domain = True
+        controller.profiles = ['test-profile']
+
+        controller.list_datasources()
+
+        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-names","child-type":"data-source","address":["profile","test-profile","subsystem","datasources"]}')
+
 
 class Struct(object):
     def __init__(self, **kwds):
