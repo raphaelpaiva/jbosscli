@@ -110,11 +110,11 @@ class TestJbosscli(unittest.TestCase):
         jbosscli.Jbosscli._invoke_cli = MagicMock()
         controller = Jbosscli("", "a:b")
         controller.domain = True
-        controller.profiles = ['test-profile']
+        controller.instances = [jbosscli.ServerInstance('server-name','host-name')]
 
         controller.list_datasources()
 
-        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources","child-type":"data-source","address":["profile","test-profile","subsystem","datasources"]}')
+        jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources","child-type":"data-source","address":["host","host-name","server","server-name","subsystem","datasources"]}')
 
 
 class Struct(object):

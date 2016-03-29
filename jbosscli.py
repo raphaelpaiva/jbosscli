@@ -31,6 +31,7 @@ class Jbosscli(object):
 
         if (self.domain):
             self.profiles = list(result['profile'].keys())
+            self.instances = self._discover_instances()
         else:
             self.profiles = ["default"]
 
@@ -189,14 +190,14 @@ class Jbosscli(object):
             enabled_datasources = self._filter_enabled_datasources(datasources)
             return {'default': enabled_datasources}
         else:
-            datasources_by_profile = {}
-            for profile in self.profiles:
-                address = '"profile","{0}",'.format(profile)
+            datasources_by_server_instance = {}
+            for instance in self.instances:
+                address = '"host","{0}","server","{1}",'.format(instance.host, instance.name)
                 response = self._invoke_cli(command.format(address))
                 datasources = response['result']
-                datasources_by_profile[profile] = self._filter_enabled_datasources(datasources)
+                datasources_by_server_instance[instance] = self._filter_enabled_datasources(datasources)
 
-            return datasources_by_profile
+            return datasources_by_server_instance
 
     def _filter_enabled_datasources(self, datasources):
         enabled_datasources = {}
@@ -207,12 +208,34 @@ class Jbosscli(object):
 
         return enabled_datasources
 
-    def read_datasource_statistics(self, datasource):
-        command = '{{"operation":"read-resource","include-runtime":"true","address":["subsystem","datasources","data-source","{0}","statistics","pool"]}}'.format(datasource)
+    def read_datasource_statistics(self, datasource, server_instance=None):
+        address = ""
+
+        if (self.domain):
+            address = '"host","{0}","server","{1}",'.format(server_instance.host, server_instance.name)
+
+        command = '{{"operation":"read-resource","include-runtime":"true","address":[{0}"subsystem","datasources","data-source","{1}","statistics","pool"]}}'.format(address, datasource)
 
         response = self._invoke_cli(command)
         return response['result']
 
+    def _discover_instances(self):
+        hosts = self.list_domain_hosts()
+        log.info("Found %i hosts: %s", len(hosts), ", ".join(hosts))
+
+        instances = []
+        for host in hosts:
+            servers = []
+            try:
+                servers = self.list_servers(host)
+            except CliError as e:
+                log.warning("No servers found for host {0}. Reason: {1}".format(host, e.msg))
+            for server in servers:
+                instances.append(ServerInstance(server, host))
+
+        log.info("Found %i instances.", len(instances))
+
+        return instances
 
 class CliError(Exception):
     def __init__(self, msg, raw=None):
@@ -237,3 +260,10 @@ class ServerGroup:
         self.deployments = deployments
     def __str__(self):
         return repr(self.name)
+
+class ServerInstance:
+    def __init__(self, name, host):
+        self.name = name
+        self.host = host
+    def __str__(self):
+        return "[{0}, {1}]".format(self.host, self.name)
