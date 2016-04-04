@@ -237,6 +237,17 @@ class Jbosscli(object):
 
         return instances
 
+    def flush_idle_connections(self, ds, instance):
+        command = '{{"operation":"flush-idle-connection-in-pool","address":[{0}"subsystem","datasources","data-source","{1}"]}}'
+        target = ""
+
+        if (self.domain):
+            target = '"host","{0}","server","{1}",'.format(instance.host, instance.name)
+
+        command = command.format(target, ds)
+
+        return self._invoke_cli(command)
+
 class CliError(Exception):
     def __init__(self, msg, raw=None):
         self.msg = msg
