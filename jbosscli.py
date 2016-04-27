@@ -188,7 +188,8 @@ class Jbosscli(object):
             datasources = response['result']
 
             enabled_datasources = self._filter_enabled_datasources(datasources)
-            return {'default': enabled_datasources}
+
+            return {ServerInstance('standalone', self.controller): enabled_datasources}
         else:
             datasources_by_server_instance = {}
             for instance in self.instances:
