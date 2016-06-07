@@ -138,15 +138,15 @@ class Jbosscli(object):
         groups = []
 
         for item in result:
-            deployments = self.get_deployments(item)
+            deployments = self.get_assigned_deployments(item)
             group = ServerGroup(item, deployments)
             groups.append(group)
 
         return groups
 
-    def get_deployments(self, server_group=None):
+    def get_assigned_deployments(self, server_group=None):
         if (self.domain and not server_group):
-            return self._get_all_deployments()
+            return self._get_all_assigned_deployments()
 
         command = '{{"operation":"read-children-resources", "child-type":"deployment"{0}}}'
 
@@ -170,7 +170,7 @@ class Jbosscli(object):
 
         return deployments
 
-    def _get_all_deployments(self):
+    def _get_all_assigned_deployments(self):
         groups = self.get_server_groups()
         deployments = []
 

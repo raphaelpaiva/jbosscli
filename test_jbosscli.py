@@ -73,17 +73,17 @@ class TestJbosscli(unittest.TestCase):
 
         self.assertEqual(len(groups), 0)
 
-    def test_get_deployments_standalone_should_not_include_path_in_command(self):
+    def test_get_assigned_deployments_standalone_should_not_include_path_in_command(self):
         jbosscli.Jbosscli._read_attributes = MagicMock()
         jbosscli.Jbosscli._invoke_cli = MagicMock()
         controller = Jbosscli("", "a:b")
         controller.domain = False
 
-        controller.get_deployments()
+        controller.get_assigned_deployments()
 
         jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources", "child-type":"deployment"}')
 
-    def test_get_deployments_domain_should_include_path_in_command(self):
+    def test_get_assigned_deployments_domain_should_include_path_in_command(self):
         jbosscli.Jbosscli._read_attributes = MagicMock()
         jbosscli.Jbosscli._invoke_cli = MagicMock()
         controller = Jbosscli("", "a:b")
@@ -91,7 +91,7 @@ class TestJbosscli(unittest.TestCase):
 
         group = jbosscli.ServerGroup("test-server-group", [])
 
-        controller.get_deployments(group)
+        controller.get_assigned_deployments(group)
 
         jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"read-children-resources", "child-type":"deployment", "address":["server-group","test-server-group"]}')
 
