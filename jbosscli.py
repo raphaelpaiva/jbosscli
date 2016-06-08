@@ -179,6 +179,37 @@ class Jbosscli(object):
 
         return deployments
 
+
+    def get_deployments(self):
+        assigned = self.get_assigned_deployments()
+
+        if not self.domain:
+            return assigned
+        else:
+            all_deployments = self._get_all_deployments()
+
+            enabled = {}
+            for a in assigned:
+                enabled[a.name] = (a.enabled, a.server_group)
+
+            for d in all_deployments:
+                if d.name in enabled:
+                    d.enabled, d.server_group = enabled[d.name]
+
+            return all_deployments
+
+    def _get_all_deployments(self):
+        response = self._invoke_cli('{"operation":"read-children-resources", "child-type":"deployment"}')
+        result = response['result']
+
+        deployments = []
+
+        for item in result.values():
+            deployment = Deployment(item['name'], item['runtime-name'])
+            deployments.append(deployment)
+
+        return deployments
+
     def list_datasources(self):
         command = '{{"operation":"read-children-resources","child-type":"data-source","address":[{0}"subsystem","datasources"]}}'
 
@@ -264,7 +295,7 @@ class Deployment:
         self.path = path
         self.server_group = server_group
     def __str__(self):
-        return "{0} - {1} - {2}".format(self.name, self.runtime_name, 'enabled' if self.enabled else 'disabled')
+        return "{0} - {1} - {2}{3}".format(self.name, self.runtime_name, 'enabled' if self.enabled else 'disabled', " - " + self.server_group if self.server_group else "")
 
 class ServerGroup:
     def __init__(self, name, deployments):
