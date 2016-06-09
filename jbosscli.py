@@ -302,7 +302,7 @@ class ServerGroup:
         self.name = name
         self.deployments = deployments
     def __str__(self):
-        return repr(self.name)
+        return self.name
 
 class ServerInstance:
     def __init__(self, name, host):
