@@ -280,6 +280,27 @@ class Jbosscli(object):
 
         return self._invoke_cli(command)
 
+    def fecth_context_root(self, deployment):
+        if self.domain:
+            instances = self.instances
+            for instance in instances:
+                context_root = ""
+                try:
+                    command = '{{"operation":"read-attribute","name":"context-root","address":["host","{0}","server","{1}","deployment","{2}","subsystem","web"]}}'
+                    command = command.format(instance.host, instance.name, deployment.name)
+                    result = self._invoke_cli(command)
+                    context_root = result['result']
+                except:
+                    pass
+                if context_root:
+                    return context_root
+            return None
+        else:
+            command = '{{"operation":"read-attribute","name":"context-root","address":["deployment","{0}","subsystem","web"]}}'
+            command = command.format(deployment.name)
+            result = self._invoke_cli(command)
+            return result['result']
+
 class CliError(Exception):
     def __init__(self, msg, raw=None):
         self.msg = msg
