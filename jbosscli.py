@@ -5,6 +5,7 @@ import logging
 import requests
 
 log = logging.getLogger("jbosscli")
+log.addHandler(logging.NullHandler())
 
 class Jbosscli(object):
     def __init__(self, controller, auth):
