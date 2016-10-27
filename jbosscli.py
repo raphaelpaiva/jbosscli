@@ -7,6 +7,7 @@ import requests
 log = logging.getLogger("jbosscli")
 log.addHandler(logging.NullHandler())
 
+
 class Jbosscli(object):
     def __init__(self, controller, auth):
         self.controller = controller
@@ -27,7 +28,9 @@ class Jbosscli(object):
         self.release_codename = result['release-codename']
         self.release_version = result['release-version']
 
-        launch_type_result = self._invoke_cli('{"operation":"read-attribute", "name":"launch-type"}')
+        launch_type_result = self._invoke_cli(
+            '{"operation":"read-attribute", "name":"launch-type"}'
+        )
         self.domain = launch_type_result['result'] == "DOMAIN"
 
         if (self.domain):
@@ -38,17 +41,26 @@ class Jbosscli(object):
 
     def _invoke_cli(self, command):
         url = "http://{0}/management".format(self.controller)
-        headers = {"Content-type":"application/json"}
+        headers = {"Content-type": "application/json"}
 
         log.debug("Requesting %s -> %s", self.controller, command)
 
-        r = requests.post(url, data=command, headers=headers, auth=requests.auth.HTTPDigestAuth(self.credentials[0], self.credentials[1]))
+        r = requests.post(
+            url,
+            data=command,
+            headers=headers,
+            auth=requests.auth.HTTPDigestAuth(
+                self.credentials[0], self.credentials[1]
+            )
+        )
 
         log.debug("Finished request with response code: %i", r.status_code)
         log.debug("Request body:\n%s", r.text)
 
         if (r.status_code >= 400 and not r.text):
-            raise CliError("Request responded a {0} code".format(r.status_code))
+            raise CliError(
+                "Request responded a {0} code".format(r.status_code)
+            )
 
         response = r.json()
 
@@ -61,11 +73,12 @@ class Jbosscli(object):
         return response
 
     def read_used_heap(self, host=None, server=None):
-        command = '{{"operation":"read-resource", "include-runtime":"true", "address":[{0}"core-service", "platform-mbean", "type", "memory"]}}'
+        command = '{{"operation":"read-resource", "include-runtime":"true",\
+        "address":[{0}"core-service", "platform-mbean", "type", "memory"]}}'
         address = ""
 
         if (host and server):
-            address = '"host","{0}","server","{1}", '.format(host,server)
+            address = '"host","{0}","server","{1}", '.format(host, server)
 
         command = command.format(address)
 
@@ -95,7 +108,9 @@ class Jbosscli(object):
         address = ""
 
         if (host and server):
-            address = ', "address": ["host", "{0}","server-config", "{1}"]'.format(host, server)
+            address = ', "address": ["host", "{0}","server-config", "{1}"]'\
+                .format(host, server)
+
             operation = '"restart"'
         else:
             operation = '"shutdown", "restart":"true"'
@@ -110,7 +125,8 @@ class Jbosscli(object):
         return hosts
 
     def list_servers(self, host):
-        command = '{{"operation":"read-children-names", "child-type":"server", "address":["host","{0}"]}}'.format(host)
+        command = '{{"operation":"read-children-names", "child-type":"server",\
+            "address":["host","{0}"]}}'.format(host)
         result = self._invoke_cli(command)
 
         if result['outcome'] == "failed":
@@ -123,7 +139,8 @@ class Jbosscli(object):
         if (not self.domain):
             return []
 
-        command = '{"operation":"read-children-names","child-type":"server-group"}'
+        command = '{"operation":"read-children-names",\
+        "child-type":"server-group"}'
 
         result = self._invoke_cli(command)
 
@@ -149,12 +166,17 @@ class Jbosscli(object):
         if (self.domain and not server_group):
             return self._get_all_assigned_deployments()
 
-        command = '{{"operation":"read-children-resources", "child-type":"deployment"{0}}}'
+        command = '{{"operation":"read-children-resources", \
+"child-type":"deployment"{0}}}'
 
-        server_group_name = server_group.name if (server_group.__class__.__name__ is 'ServerGroup') else server_group
+        server_group_name = server_group.name if (
+            server_group.__class__.__name__ is 'ServerGroup'
+        ) else server_group
 
         if (self.domain):
-            command = command.format(', "address":["server-group","{0}"]'.format(server_group_name))
+            command = command.format(
+                ', "address":["server-group","{0}"]'.format(server_group_name)
+            )
         else:
             command = command.format("")
 
@@ -166,7 +188,13 @@ class Jbosscli(object):
             result = result['result']
 
             for item in result.values():
-                deployment = Deployment(item['name'], item['runtime-name'], item['enabled'], server_group=server_group)
+                deployment = Deployment(
+                    item['name'],
+                    item['runtime-name'],
+                    item['enabled'],
+                    server_group=server_group
+                )
+
                 deployments.append(deployment)
 
         return deployments
@@ -179,7 +207,6 @@ class Jbosscli(object):
             deployments.extend(group.deployments)
 
         return deployments
-
 
     def get_deployments(self):
         assigned = self.get_assigned_deployments()
@@ -200,7 +227,10 @@ class Jbosscli(object):
             return all_deployments
 
     def _get_all_deployments(self):
-        response = self._invoke_cli('{"operation":"read-children-resources", "child-type":"deployment"}')
+        response = self._invoke_cli(
+            '{"operation":"read-children-resources",\
+            "child-type":"deployment"}'
+        )
         result = response['result']
 
         deployments = []
@@ -212,7 +242,8 @@ class Jbosscli(object):
         return deployments
 
     def list_datasources(self):
-        command = '{{"operation":"read-children-resources","child-type":"data-source","address":[{0}"subsystem","datasources"]}}'
+        command = '{{"operation":"read-children-resources",\
+"child-type":"data-source","address":[{0}"subsystem","datasources"]}}'
 
         if(not self.domain):
             command = command.format("")
@@ -221,14 +252,21 @@ class Jbosscli(object):
 
             enabled_datasources = self._filter_enabled_datasources(datasources)
 
-            return {ServerInstance('standalone', self.controller): enabled_datasources}
+            return {
+                ServerInstance('standalone', self.controller):
+                    enabled_datasources
+            }
         else:
             datasources_by_server_instance = {}
             for instance in self.instances:
-                address = '"host","{0}","server","{1}",'.format(instance.host, instance.name)
+                address = '"host","{0}","server","{1}",'.format(
+                    instance.host,
+                    instance.name
+                )
                 response = self._invoke_cli(command.format(address))
                 datasources = response['result']
-                datasources_by_server_instance[instance] = self._filter_enabled_datasources(datasources)
+                datasources_by_server_instance[instance] =\
+                    self._filter_enabled_datasources(datasources)
 
             return datasources_by_server_instance
 
@@ -245,9 +283,13 @@ class Jbosscli(object):
         address = ""
 
         if (self.domain):
-            address = '"host","{0}","server","{1}",'.format(server_instance.host, server_instance.name)
+            address = '"host","{0}","server","{1}",'.format(
+                server_instance.host, server_instance.name
+            )
 
-        command = '{{"operation":"read-resource","include-runtime":"true","address":[{0}"subsystem","datasources","data-source","{1}","statistics","pool"]}}'.format(address, datasource)
+        command = '{{"operation":"read-resource","include-runtime":"true",\
+            "address":[{0}"subsystem","datasources","data-source",\
+            "{1}","statistics","pool"]}}'.format(address, datasource)
 
         response = self._invoke_cli(command)
         return response['result']
@@ -262,7 +304,11 @@ class Jbosscli(object):
             try:
                 servers = self.list_servers(host)
             except CliError as e:
-                log.warning("No servers found for host {0}. Reason: {1}".format(host, e.msg))
+                log.warning(
+                    "No servers found for host {0}. Reason: {1}".format(
+                        host, e.msg
+                    )
+                )
             for server in servers:
                 instances.append(ServerInstance(server, host))
 
@@ -271,11 +317,14 @@ class Jbosscli(object):
         return instances
 
     def flush_idle_connections(self, ds, instance):
-        command = '{{"operation":"flush-idle-connection-in-pool","address":[{0}"subsystem","datasources","data-source","{1}"]}}'
+        command = '{{"operation":"flush-idle-connection-in-pool",\
+"address":[{0}"subsystem","datasources","data-source","{1}"]}}'
         target = ""
 
         if (self.domain):
-            target = '"host","{0}","server","{1}",'.format(instance.host, instance.name)
+            target = '"host","{0}","server","{1}",'.format(
+                instance.host, instance.name
+            )
 
         command = command.format(target, ds)
 
@@ -287,8 +336,13 @@ class Jbosscli(object):
             for instance in instances:
                 context_root = ""
                 try:
-                    command = '{{"operation":"read-attribute","name":"context-root","address":["host","{0}","server","{1}","deployment","{2}","subsystem","web"]}}'
-                    command = command.format(instance.host, instance.name, deployment.name)
+                    command = '{{"operation":"read-attribute",\
+                        "name":"context-root",\
+                        "address":["host","{0}","server","{1}",\
+                        "deployment","{2}","subsystem","web"]}}'
+                    command = command.format(
+                        instance.host, instance.name, deployment.name
+                    )
                     result = self._invoke_cli(command)
                     context_root = result['result']
                 except:
@@ -297,38 +351,54 @@ class Jbosscli(object):
                     return context_root
             return None
         else:
-            command = '{{"operation":"read-attribute","name":"context-root","address":["deployment","{0}","subsystem","web"]}}'
+            command = '{{"operation":"read-attribute","name":"context-root",\
+            "address":["deployment","{0}","subsystem","web"]}}'
             command = command.format(deployment.name)
             result = self._invoke_cli(command)
             return result['result']
+
 
 class CliError(Exception):
     def __init__(self, msg, raw=None):
         self.msg = msg
         self.raw = raw if raw else self.msg
+
     def __str__(self):
         return repr(self.msg)
 
+
 class Deployment:
-    def __init__(self, name, runtime_name, enabled=False, path=None, server_group=None):
+    def __init__(
+        self, name, runtime_name, enabled=False, path=None, server_group=None
+    ):
         self.name = name
         self.runtime_name = runtime_name
         self.enabled = enabled
         self.path = path
         self.server_group = server_group
+
     def __str__(self):
-        return "{0} - {1} - {2}{3}".format(self.name, self.runtime_name, 'enabled' if self.enabled else 'disabled', " - " + self.server_group if self.server_group else "")
+        return "{0} - {1} - {2}{3}".format(
+            self.name,
+            self.runtime_name,
+            'enabled' if self.enabled else 'disabled',
+            " - " + self.server_group if self.server_group else ""
+        )
+
 
 class ServerGroup:
     def __init__(self, name, deployments):
         self.name = name
         self.deployments = deployments
+
     def __str__(self):
         return self.name
+
 
 class ServerInstance:
     def __init__(self, name, host):
         self.name = name
         self.host = host
+
     def __str__(self):
         return "[{0}, {1}]".format(self.host, self.name)
