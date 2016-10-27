@@ -357,6 +357,12 @@ class Jbosscli(object):
             result = self._invoke_cli(command)
             return result['result']
 
+    def get_system_properties(self):
+        result = self._invoke_cli(
+            '{"operation":"read-children-resources","child-type":"system-property"}'
+        )
+
+        return result['result']
 
 class CliError(Exception):
     def __init__(self, msg, raw=None):

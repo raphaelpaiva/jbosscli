@@ -42,10 +42,12 @@ class TestJbosscli(unittest.TestCase):
         self.assertEqual(clierror.raw, json_response)
 
     def test__invoke_cli_ParserError_should_raise_CliError(self):
-        response = Struct(status_code=500,
-                          text="Parser error",
-                          json=MagicMock(return_value="Parser error")
+        response = Struct(
+            status_code=500,
+            text="Parser error",
+            json=MagicMock(return_value="Parser error")
         )
+
         jbosscli.requests.post = MagicMock(return_value=response)
 
         with self.assertRaises(CliError) as cm:
@@ -136,6 +138,7 @@ class TestJbosscli(unittest.TestCase):
         controller.flush_idle_connections("test-ds", controller.instances[0])
 
         jbosscli.Jbosscli._invoke_cli.assert_called_with('{"operation":"flush-idle-connection-in-pool","address":["host","host-name","server","server-name","subsystem","datasources","data-source","test-ds"]}')
+
 
 class Struct(object):
     def __init__(self, **kwds):
