@@ -32,7 +32,7 @@ class Jbosscli(object):
             '{"operation":"read-attribute", "name":"launch-type"}'
         )
         self.domain = launch_type_result['result'] == "DOMAIN"
-
+##
         if (self.domain):
             self.profiles = list(result['profile'].keys())
             self.instances = self._discover_instances()
