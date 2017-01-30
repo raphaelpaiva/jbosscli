@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
-import json
 import logging
 import requests
+import copy
+import re
+
 
 log = logging.getLogger("jbosscli")
 log.addHandler(logging.NullHandler())
@@ -32,7 +34,7 @@ class Jbosscli(object):
             '{"operation":"read-attribute", "name":"launch-type"}'
         )
         self.domain = launch_type_result['result'] == "DOMAIN"
-##
+
         if (self.domain):
             self.profiles = list(result['profile'].keys())
             self.instances = self._discover_instances()
@@ -44,21 +46,26 @@ class Jbosscli(object):
         headers = {"Content-type": "application/json"}
 
         log.debug("Requesting %s -> %s", self.controller, command)
-
-        r = requests.post(
-            url,
-            data=command,
-            headers=headers,
-            auth=requests.auth.HTTPDigestAuth(
-                self.credentials[0], self.credentials[1]
+        try:
+            r = requests.post(
+                url,
+                data=command,
+                headers=headers,
+                auth=requests.auth.HTTPDigestAuth(
+                    self.credentials[0], self.credentials[1]
+                )
             )
-        )
+
+        except Exception as excpt:
+            raise ServerError(
+                "Error requesting: {0} code".format(excpt.message)
+            )
 
         log.debug("Finished request with response code: %i", r.status_code)
         log.debug("Request body:\n%s", r.text)
 
         if (r.status_code >= 400 and not r.text):
-            raise CliError(
+            raise ServerError(
                 "Request responded a {0} code".format(r.status_code)
             )
 
@@ -95,10 +102,10 @@ class Jbosscli(object):
         heap_memory_usage = result['heap-memory-usage']
 
         used_heap = heap_memory_usage['used']
-        used_heap = float(used_heap)/1024/1024/1024
+        used_heap = float(used_heap) / 1024 / 1024 / 1024
 
         max_heap = heap_memory_usage['max']
-        max_heap = float(max_heap)/1024/1024/1024
+        max_heap = float(max_heap) / 1024 / 1024 / 1024
 
         return (used_heap, max_heap)
 
@@ -108,7 +115,7 @@ class Jbosscli(object):
         address = ""
 
         if (host and server):
-            address = ', "address": ["host", "{0}","server-config", "{1}"]'\
+            address = ', "address": ["host", "{0}","server-config", "{1}"]' \
                 .format(host, server)
 
             operation = '"restart"'
@@ -245,7 +252,7 @@ class Jbosscli(object):
         command = '{{"operation":"read-children-resources",\
 "child-type":"data-source","address":[{0}"subsystem","datasources"]}}'
 
-        if(not self.domain):
+        if (not self.domain):
             command = command.format("")
             response = self._invoke_cli(command)
             datasources = response['result']
@@ -265,7 +272,7 @@ class Jbosscli(object):
                 )
                 response = self._invoke_cli(command.format(address))
                 datasources = response['result']
-                datasources_by_server_instance[instance] =\
+                datasources_by_server_instance[instance] = \
                     self._filter_enabled_datasources(datasources)
 
             return datasources_by_server_instance
@@ -327,7 +334,6 @@ class Jbosscli(object):
             )
 
         command = command.format(target, ds)
-
         return self._invoke_cli(command)
 
     def fecth_context_root(self, deployment):
@@ -364,7 +370,301 @@ class Jbosscli(object):
 
         return result['result']
 
+    #
+    #  is_server_state_started
+    # @param host => nome do host [Ex: "vmsigap1"] (nao necessario se standalone)
+    # @param instance => nome da instancia [Ex: "sigadoc-server01"] (nao necessario se standalone)
+    # @return Boolean
+    def is_server_state_started(self, host=None, instance=None):
+        try:
+            cmdo = ''
+            if self.domain:
+                cmdo += '{"operation":"read-attribute","address":[{"host":"'
+                cmdo += host
+                cmdo += '"},{"server-config":"'
+                cmdo += instance
+                cmdo += '"}],"name":"server-state","json.pretty":1}'
+                # print cmdo
+            else:
+                cmdo = '{"operation":"read-attribute","name":"status","json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"] == "STARTED"
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error is_server_state_started: {0} code".format(excpt.message)
+            )
+
+    #
+    # get_datasource_state
+    # @param dtasrc => nome do datasource [Ex: "SigaExDS"]
+    # @param host => nome do host [Ex: "vmsigap1"] (nao necessario se standalone)
+    # @param instance => nome da instancia [Ex: "sigadoc-server01"] (nao necessario se standalone)
+    # @return Boolean
+    def get_datasource_state(self, dtasrc, host=None, instance=None):
+        try:
+            cmdo = ''
+            if self.domain:
+                cmdo += '{"operation":"test-connection-in-pool","address":[{"host":"'
+                cmdo += host
+                cmdo += '"},{"server":"'
+                cmdo += instance
+                cmdo += '"},{"subsystem":"datasources"},{"data-source":"'
+                cmdo += dtasrc
+                cmdo += '"}],"json.pretty":1}'
+            else:
+                cmdo += '{"operation":"test-connection-in-pool","address":[{"subsystem":"datasources"},{"data-source":"'
+                cmdo += dtasrc
+                cmdo += '"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"][0]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error get_datasource_state: {0} code".format(excpt.message)
+            )
+
+
+    #
+    # list_hosts_ctrls
+    # @return list  List of host ctrolers
+    def list_hosts_ctrls(self):
+        domsrv = unicode(self.controller.split(":")[0])
+        lsthsts = copy.copy(self.list_domain_hosts())
+        regex = re.compile("^" + domsrv)
+        return [x for i, x in enumerate(lsthsts) if not re.match(regex,x)]
+
+    def is_in_list_hosts_ctrls(self, host):
+        return host in self.list_hosts_ctrls()
+
+    def list_instances_of_a_host(self, host):
+        try:
+            if not self.domain:
+                raise CliError(
+                    "Error list_instances_of_a_host: It is not a domain server."
+                )
+            if not self.is_in_list_hosts_ctrls(host):
+                raise CliError(
+                    "Error list_instances_of_a_host: host '{0}' is not started as a host controller.".format(host)
+                )
+            cmdo = '{"operation":"read-children-names","child-type":"server-config","address":[{"host":"'
+            cmdo += host
+            cmdo += '"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error list_instances_of_a_host: {0} code".format(excpt.message)
+            )
+
+    def list_started_instances_of_a_host(self, host):
+        try:
+            started = []
+            for srvr in self.list_instances_of_a_host(host):
+                if self.is_server_state_started():
+                    started.append(srvr)
+            return started
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error list_instances_of_a_host: {0} code".format(excpt.message)
+            )
+
+    def get_state_of_a_host_instance(self, host, instance ):
+        try:
+            if not self.domain:
+                raise CliError(
+                    "Error get_state_of_host_instance: It is not a domain server."
+                )
+            if not self.is_in_list_hosts_ctrls(host):
+                raise CliError(
+                    "Error get_state_of_a_host_instance: host '{0}' is not started as a host controller.".format(host)
+                )
+            cmdo = '{"operation":"read-attribute","address":[{"host":"'
+            cmdo += host
+            cmdo += '"},{"server-config":"'
+            cmdo += instance
+            cmdo += '"}],"name":"status","json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error get_state_of_host_instance: {0} code".format(excpt.message)
+            )
+
+    def list_instances_states_of_a_host(self, host):
+        if not self.is_in_list_hosts_ctrls(host):
+            raise CliError(
+                "Error list_instances_states_of_a_host: host '{0}' is not started as a host controller.".format(host)
+            )
+        res = []
+        for inst in self.list_instances_of_a_host(host):
+            state = self.get_state_of_a_host_instance(host, inst)
+            res.append((host, inst, state))
+        return res
+
+    def stop_servers_of_a_host(self, host):
+        if not self.is_in_list_hosts_ctrls(host):
+            raise CliError(
+                "Error stop_servers_of_a_host: host '{0}' is not started as a host controller.".format(host )
+            )
+        for x in self.list_instances_states_of_a_host(host):
+            (hst, inst, sts) = x
+            if sts in ["STARTED", "STARTING"]:
+                self.stop_host_instance(host,inst)
+
+    def start_servers_of_a_host(self, host):
+        if not self.is_in_list_hosts_ctrls(host):
+            raise CliError(
+                "Error start_servers_of_a_host: host '{0}' is not started as a host controller.".format(host)
+            )
+        for x in self.list_instances_states_of_a_host(host):
+            (hst, inst, sts) = x
+            if sts not in ["STARTED", "STARTING"]:
+                self.start_host_instance(host,inst)
+
+    def shutdown_host(self, host):
+        try:
+            if not self.is_in_list_hosts_ctrls(host):
+                raise CliError(
+                    "Error shutdown_host: host '{0}' is not started as a host controller.".format(host)
+                )
+            if not self.domain:
+                raise CliError(
+                    "Error shutdown_host: It is not a domain server."
+                )
+            cmdo = '{"operation":"shutdown","child-type":"server","address":[{"host":"'
+            cmdo += host
+            cmdo += '"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error shutdown_host: {0} code".format(excpt.message)
+            )
+
+    def stop_host_instance(self, host, instance):
+        try:
+            if not self.is_in_list_hosts_ctrls(host):
+                raise CliError(
+                    "Error stop_host_instance: host '{0}' is not started as a host controller.".format(host)
+                )
+            if not self.domain:
+                raise CliError(
+                    "Error stop_host_instance: It is not a domain server."
+                )
+            cmdo = '{"operation":"stop","address":[{"host":"'
+            cmdo += host
+            cmdo += '"},{"server-config":"'
+            cmdo += instance
+            cmdo += '"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error stop_host_instance: {0} code".format(excpt.message)
+            )
+
+    def start_host_instance(self, host, instance):
+        try:
+            if not self.is_in_list_hosts_ctrls(host):
+                raise CliError(
+                    "Error start_host_instance: host '{0}' is not started as a host controller.".format(host)
+                )
+            if not self.domain:
+                raise CliError(
+                    "Error start_host_instance: It is not a domain server."
+                )
+            cmdo = '{"operation":"start","address":[{"host":"'
+            cmdo += host
+            cmdo += '"},{"server-config":"'
+            cmdo += instance
+            cmdo += '"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error start_host_instance: {0} code".format(excpt.message)
+            )
+
+    def stop_servers(self):
+        try:
+            if not self.domain:
+                raise CliError(
+                    "Error stop_host_instance: It is not a domain server."
+                )
+            cmdo = '{"operation":"stop-servers","address":[],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error stop_servers: {0} code".format(excpt.message)
+            )
+
+    def start_servers(self):
+        try:
+            if not self.domain:
+                raise CliError(
+                    "Error start-servers: It is not a domain server."
+                )
+            cmdo = '{"operation":"start-servers","address":[],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error stop_servers: {0} code".format(excpt.message)
+            )
+
+
+# When err "failed" received from Domain ctrl or server standalone
 class CliError(Exception):
+    def __init__(self, msg, raw=None):
+        self.msg = msg
+        self.raw = raw if raw else self.msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
+# @description When err na communicating with Domain ctrl or server standalone
+class ServerError(Exception):
     def __init__(self, msg, raw=None):
         self.msg = msg
         self.raw = raw if raw else self.msg
@@ -375,7 +675,7 @@ class CliError(Exception):
 
 class Deployment:
     def __init__(
-        self, name, runtime_name, enabled=False, path=None, server_group=None
+            self, name, runtime_name, enabled=False, path=None, server_group=None
     ):
         self.name = name
         self.runtime_name = runtime_name
@@ -408,3 +708,12 @@ class ServerInstance:
 
     def __str__(self):
         return "[{0}, {1}]".format(self.host, self.name)
+
+#TODO: [domain@localhost:9999 /] /server-group=main-server-group:start-servers
+#TODO: [domain@localhost:9999 /] /server-group=main-server-group:stop-servers
+
+
+
+
+
+

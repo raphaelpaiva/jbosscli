@@ -6,6 +6,7 @@ from mock import MagicMock
 import jbosscli
 from jbosscli import Jbosscli
 from jbosscli import CliError
+from jbosscli import ServerError
 
 class TestJbosscli(unittest.TestCase):
     def test__invoke_cli_should_return_dict(self):
@@ -19,7 +20,7 @@ class TestJbosscli(unittest.TestCase):
 
     def test__invoke_cli_401_statuscode__should_raise_CliError(self):
         jbosscli.requests.post = MagicMock(return_value=Struct(status_code=401, text=None))
-        with self.assertRaises(CliError) as cm:
+        with self.assertRaises(ServerError) as cm:
             Jbosscli("", "a:b")._invoke_cli("")
 
         clierror = cm.exception
