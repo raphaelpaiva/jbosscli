@@ -367,15 +367,16 @@ class Jbosscli(object):
         result = self._invoke_cli(
             '{"operation":"read-children-resources","child-type":"system-property"}'
         )
+        # return result['result']
 
-        return result['result']
-
-    #
-    #  is_server_state_started
-    # @param host => nome do host [Ex: "vmsigap1"] (nao necessario se standalone)
-    # @param instance => nome da instancia [Ex: "sigadoc-server01"] (nao necessario se standalone)
-    # @return Boolean
     def is_server_state_started(self, host=None, instance=None):
+        """Inform if the server(instance) is started
+        :author: Luiz Antonio
+
+        :param host(str): Host name
+        :param instance(str): Server (instance) name
+        :return(bool): True if "STARTED" otherwise False.
+        """
         try:
             cmdo = ''
             if self.domain:
@@ -398,13 +399,16 @@ class Jbosscli(object):
                 "Error is_server_state_started: {0} code".format(excpt.message)
             )
 
-    #
-    # get_datasource_state
-    # @param dtasrc => nome do datasource [Ex: "SigaExDS"]
-    # @param host => nome do host [Ex: "vmsigap1"] (nao necessario se standalone)
-    # @param instance => nome da instancia [Ex: "sigadoc-server01"] (nao necessario se standalone)
-    # @return Boolean
+
     def get_datasource_state(self, dtasrc, host=None, instance=None):
+        """Get a datasource state
+        :author: Luiz Antonio
+
+        :param dtasrc(str): Datasource name.
+        :param host(str): Host name.
+        :param instance(str): Server (instance) name.
+        :return: A state(str) of the data source given.
+        """
         try:
             cmdo = ''
             if self.domain:
@@ -431,19 +435,33 @@ class Jbosscli(object):
             )
 
 
-    #
-    # list_hosts_ctrls
-    # @return list  List of host ctrolers
     def list_hosts_ctrls(self):
+        """List the host controllers
+        :author: Luiz Antonio
+
+        :return: List (list of str) of  host controllers names
+        """
         domsrv = unicode(self.controller.split(":")[0])
         lsthsts = copy.copy(self.list_domain_hosts())
         regex = re.compile("^" + domsrv)
         return [x for i, x in enumerate(lsthsts) if not re.match(regex,x)]
 
     def is_in_list_hosts_ctrls(self, host):
+        """Ask if a given host is in the list o host controllers
+         :author: Luiz Antonio
+
+        :param host(str): Host name.
+        :return: True if the given host name is in the list of host controllers
+        """
         return host in self.list_hosts_ctrls()
 
     def list_instances_of_a_host(self, host):
+        """List the server(instances) names of a given host
+        :author: Luiz Antonio
+
+        :param host:
+        :return: A (list) of server names (str).
+        """
         try:
             if not self.domain:
                 raise CliError(
@@ -468,6 +486,12 @@ class Jbosscli(object):
             )
 
     def list_started_instances_of_a_host(self, host):
+        """List the started servers(instances) of a host
+        :author: Luiz Antonio
+
+        :param host(str): host name.
+        :return: A (list) of started servers(str)
+        """
         try:
             started = []
             for srvr in self.list_instances_of_a_host(host):
@@ -484,6 +508,13 @@ class Jbosscli(object):
             )
 
     def get_state_of_a_host_instance(self, host, instance ):
+        """ Get a state of a server(instance)
+        :author: Luiz Antonio
+
+        :param host(str): Host name.
+        :param instance(str): Server Name (instance)
+        :return: The state(str) of a given server(instance)
+        """
         try:
             if not self.domain:
                 raise CliError(
@@ -510,6 +541,12 @@ class Jbosscli(object):
             )
 
     def list_instances_states_of_a_host(self, host):
+        """List the states of all server(instances) of a host.
+        :author: Luiz Antonio
+
+        :param host(str): Host name.
+        :return: The tuple (host(str), server(str), state(str))
+        """
         if not self.is_in_list_hosts_ctrls(host):
             raise CliError(
                 "Error list_instances_states_of_a_host: host '{0}' is not started as a host controller.".format(host)
@@ -521,6 +558,12 @@ class Jbosscli(object):
         return res
 
     def stop_servers_of_a_host(self, host):
+        """Stop all servers of a host
+        :author: Luiz Antonio
+
+        :param host(str): Hot name.
+        :return: None
+        """
         if not self.is_in_list_hosts_ctrls(host):
             raise CliError(
                 "Error stop_servers_of_a_host: host '{0}' is not started as a host controller.".format(host )
@@ -531,6 +574,12 @@ class Jbosscli(object):
                 self.stop_host_instance(host,inst)
 
     def start_servers_of_a_host(self, host):
+        """Start all servers of a host
+              :author: Luiz Antonio
+
+              :param host(str): Hot name.
+              :return None
+        """
         if not self.is_in_list_hosts_ctrls(host):
             raise CliError(
                 "Error start_servers_of_a_host: host '{0}' is not started as a host controller.".format(host)
@@ -541,6 +590,12 @@ class Jbosscli(object):
                 self.start_host_instance(host,inst)
 
     def shutdown_host(self, host):
+        """Shutdown the host. Note: after that you can only start in the server
+        :author: Luiz Antonio
+
+        :param host(str): Host name
+        :return: the result(str).
+        """
         try:
             if not self.is_in_list_hosts_ctrls(host):
                 raise CliError(
@@ -565,6 +620,13 @@ class Jbosscli(object):
             )
 
     def stop_host_instance(self, host, instance):
+        """ Stop a server(instance) of a host
+        :author: Luiz Antonio
+
+        :param host(str): Host name.
+        :param instance(str): Server(instance) name.
+        :return:
+        """
         try:
             if not self.is_in_list_hosts_ctrls(host):
                 raise CliError(
@@ -591,6 +653,13 @@ class Jbosscli(object):
             )
 
     def start_host_instance(self, host, instance):
+        """Start a host server(instance).
+        :author: Luiz Antonio
+
+        :param host: A host name.
+        :param instance: A server(instance) name
+        :return: The result(str).
+        """
         try:
             if not self.is_in_list_hosts_ctrls(host):
                 raise CliError(
@@ -617,6 +686,11 @@ class Jbosscli(object):
             )
 
     def stop_servers(self):
+        """Stop all servers(instances) of all hosts.
+        :author: Luiz Antonio
+
+        :return: Result(str).
+        """
         try:
             if not self.domain:
                 raise CliError(
@@ -635,6 +709,11 @@ class Jbosscli(object):
             )
 
     def start_servers(self):
+        """Start all servers(instances) of all hosts.
+        :author: Luiz Antonio
+
+        :return: Result(str)
+        """
         try:
             if not self.domain:
                 raise CliError(
@@ -652,6 +731,66 @@ class Jbosscli(object):
                 "Error stop_servers: {0} code".format(excpt.message)
             )
 
+    def is_server_group(self, name):
+        """Ask if the name given is a server group of the current domain.
+        :author: Luiz Antonio
+
+        :param name(str): Server group name.
+        :return: True if the name given is a sever group name, otherwise False.
+        """
+        return name in self.list_server_groups()
+
+    def stop_server_group(self, srvrgrp):
+        """Stop all servers(instances) of this server group in all hosts.
+         :author: Luiz Antonio
+
+        :param srvrgrp(str):
+        :return: Result(str)
+        """
+        try:
+            if not self.is_server_group(srvrgrp):
+                raise CliError(
+                    "Error stop_server_group: Server group {0} does no exist on this domain".format(srvrgrp)
+                )
+            cmdo = '{"operation":"stop-servers","address":[{"server-group":"'
+            cmdo += srvrgrp
+            cmdo += '"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error stop_server_group: {0} code".format(excpt.message)
+            )
+
+    def start_server_group(self, srvrgrp):
+        """Start all severs(instances) o this server group in all hosts.
+        :author: Luiz Antonio
+
+        :param srvrgrp(str): Server group name.
+        :return: Result(str)
+        """
+        try:
+            if not self.is_server_group(srvrgrp):
+                raise CliError(
+                    "Error stop_server_group: Server group {0} does no exist on this domain".format(srvrgrp)
+                )
+            cmdo = '{"operation":"start-servers","address":[{"server-group":"'
+            cmdo += srvrgrp
+            cmdo += '"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error stop_server_group: {0} code".format(excpt.message)
+            )
 
 # When err "failed" received from Domain ctrl or server standalone
 class CliError(Exception):
@@ -709,8 +848,7 @@ class ServerInstance:
     def __str__(self):
         return "[{0}, {1}]".format(self.host, self.name)
 
-#TODO: [domain@localhost:9999 /] /server-group=main-server-group:start-servers
-#TODO: [domain@localhost:9999 /] /server-group=main-server-group:stop-servers
+
 
 
 
