@@ -384,7 +384,7 @@ class Jbosscli(object):
                 cmdo += host
                 cmdo += '"},{"server-config":"'
                 cmdo += instance
-                cmdo += '"}],"name":"server-state","json.pretty":1}'
+                cmdo += '"}],"name":"status","json.pretty":1}'
                 # print cmdo
             else:
                 cmdo = '{"operation":"read-attribute","name":"status","json.pretty":1}'
@@ -434,6 +434,150 @@ class Jbosscli(object):
                 "Error get_datasource_state: {0} code".format(excpt.message)
             )
 
+    def list_all_profiles(self):
+        """List all profiles
+        :author: Luiz Antonio
+
+        :return: List of profiles
+        """
+        try:
+            cmdo = '{"operation":"read-children-names","child-type":"profile","address":[],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error get_datasource_state: {0} code".format(excpt.message)
+            )
+
+    def list_datasources_of_profile(self, profile):
+        """List datasources of a profile
+        :author: Luiz Antonio
+
+        :param profile: Profile name (str)
+        :return: List of datasource names
+        """
+        try:
+          cmdo = '{"operation":"read-children-names","child-type":"data-source","address":['
+          cmdo += '{"profile":"'
+          cmdo += profile
+          cmdo += '"},{"subsystem":"datasources"}],"json.pretty":1}'
+          res = self._invoke_cli(cmdo)
+          return res["result"]
+        except ServerError as excpt:
+          raise excpt
+        except CliError as excpt:
+          raise excpt
+        except Exception as excpt:
+          raise CliError(
+              "Error get_datasource_state: {0} code".format(excpt.message)
+          )
+
+    def get_profile_of_server_group(self, group):
+        """Get the profile of a given server group
+
+        :param sg: Server group name (str)
+        :return: The name of the profile
+        """
+        try:
+          cmdo = '{"operation":"read-attribute","name":"profile","address":['
+          cmdo += '{"server-group":"'
+          cmdo += group
+          cmdo += '"}],"json.pretty":1}'
+          res = self._invoke_cli(cmdo)
+          return res["result"]
+        except ServerError as excpt:
+          raise excpt
+        except CliError as excpt:
+          raise excpt
+        except Exception as excpt:
+          raise CliError(
+              "Error get_datasource_state: {0} code".format(excpt.message)
+          )
+
+    def list_server_groups_of_profile(self, profile):
+        """List the server groups of a given profile
+        :author: Luiz Antonio
+
+        :param profile: Profile name (str)
+        :return: A list of server groups of a profile
+        """
+        sgs = self.list_server_groups()
+        lst = []
+        for sg in sgs:
+            pf = self.get_profile_of_server_group(sg)
+            if pf == profile:
+                lst.append(sg)
+        return lst
+
+    def get_server_group_of_host_instance(self, host, instance):
+        """Get the server group of a given server group
+        :author: Luiz Antonio
+
+        :param host: Host name (str)
+        :instance: Server (instance) name
+        :return: The name of the profile
+        """
+        try:
+            cmdo = '{"operation":"read-attribute","name":"group","address":['
+            cmdo += '{"host":"'
+            cmdo += host
+            cmdo += '"},{"server-config":"'
+            cmdo += instance
+            cmdo += '"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
+        except ServerError as excpt:
+            raise excpt
+        except CliError as excpt:
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error get_data_source_state: {0} code".format(excpt.message)
+            )
+
+    def list_data_sources_states_of_host_instance(self, host, instance):
+        """List states of a instance datasources
+        :author: Luiz Antonio
+
+        :param host: Host name (str)
+        :param instance: Server (instance) name
+        :return: A tuple (host, server (instance), datasource, state)
+        """
+        lst = []
+        try:
+            svg = self.get_server_group_of_host_instance(host, instance)
+            prof = self.get_profile_of_server_group(svg)
+            dts = self.list_datasources_of_profile(prof)
+            for ds in dts:
+                state = self.get_datasource_state(ds, host, instance)
+                lst.append((host, instance, ds, state))
+            return lst
+        except Exception as excpt:
+            raise CliError(
+                "Error list_data_sources_states_of_host_instance: {0} ".format(excpt.message)
+            )
+
+    def list_datas_sources_states_of_host(self, host):
+        """List states of a instance datasources
+        :author: Luiz Antonio
+
+        :param host: Host name (str)
+        :return: A tuple (host, server (instance), state)
+        """
+        try:
+            lst = []
+            insts = self.list_started_instances_of_a_host(host)
+            for instance in insts:
+                lst += self.list_data_sources_states_of_host_instance(host, instance)
+            return lst
+        except Exception as excpt:
+            raise CliError(
+                "Error list_datas_sources_states_of_host: {0} ".format(excpt.message)
+            )
 
     def list_hosts_ctrls(self):
         """List the host controllers
@@ -495,7 +639,7 @@ class Jbosscli(object):
         try:
             started = []
             for srvr in self.list_instances_of_a_host(host):
-                if self.is_server_state_started():
+                if self.is_server_state_started(host, srvr):
                     started.append(srvr)
             return started
         except ServerError as excpt:
