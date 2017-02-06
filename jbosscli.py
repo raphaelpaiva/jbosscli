@@ -58,7 +58,7 @@ class Jbosscli(object):
 
         except Exception as excpt:
             raise ServerError(
-                "Error requesting: {0} code".format(excpt.message)
+                "Error requesting: {0} code".format(excpt.msg)
             )
 
         log.debug("Finished request with response code: %i", r.status_code)
@@ -390,14 +390,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"] == "STARTED"
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error is_server_state_started: {0} code".format(excpt.message)
+                "Error is_server_state_started({0},{1}): {2} code".format(host, instance, excpt.msg)
             )
 
     def get_datasource_state(self, dtasrc, host=None, instance=None):
@@ -426,14 +426,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"][0]
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error get_datasource_state: {0} code".format(excpt.message)
+                "Error get_datasource_state({0},{1},{2}): {0} code".format(dtasrc, host,instance, excpt.msg)
             )
 
     def list_all_profiles(self):
@@ -447,14 +447,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error get_datasource_state: {0} code".format(excpt.message)
+                "Error get_datasource_state: {0} code".format(excpt.msg)
             )
 
     def list_datasources_of_profile(self, profile):
@@ -472,14 +472,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-              "Error list_datasources_of_profile: {0} code".format(excpt.message)
+              "Error list_datasources_of_profile({0}): {1} code".format(profile, excpt.msg)
             )
 
     def get_profile_of_server_group(self, group):
@@ -496,14 +496,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-              "Error get_profile_of_server_group: {0} code".format(excpt.message)
+              "Error get_profile_of_server_group({0}): {1} code".format(group, excpt.msg)
             )
 
     def list_server_groups_of_profile(self, profile):
@@ -522,14 +522,14 @@ class Jbosscli(object):
                     lst.append(sg)
             return lst
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error list_server_groups_of_profile: {0} code".format(excpt.message)
+                "Error list_server_groups_of_profile({0}): {0} code".format(profile, excpt.msg)
             )
 
     def get_server_group_of_host_instance(self, host, instance):
@@ -550,14 +550,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error get_data_source_state: {0} code".format(excpt.message)
+                "Error get_data_source_state({0},{1}): {2} code".format(host, instance, excpt.msg)
             )
 
     def list_data_sources_states_of_host_instance(self, host, instance):
@@ -579,7 +579,7 @@ class Jbosscli(object):
             return lst
         except Exception as excpt:
             raise CliError(
-                "Error list_data_sources_states_of_host_instance: {0} ".format(excpt.message)
+                "Error list_data_sources_states_of_host_instance({0}, {1}): {2} ".format(host, instance, excpt.msg)
             )
 
     def list_datas_sources_states_of_host(self, host):
@@ -597,7 +597,7 @@ class Jbosscli(object):
             return lst
         except Exception as excpt:
             raise CliError(
-                "Error list_datas_sources_states_of_host: {0} ".format(excpt.message)
+                "Error list_datas_sources_states_of_host({0}): {1} ".format(host, excpt.msg)
             )
 
     def list_hosts_ctrls(self):
@@ -613,7 +613,7 @@ class Jbosscli(object):
             return [x for i, x in enumerate(lsthsts) if not re.match(regex,x)]
         except Exception as excpt:
             raise CliError(
-                "Error list_datas_sources_states_of_host: {0} ".format(excpt.message)
+                "Error list_datas_sources_states_of_host(): {0} ".format(excpt.msg)
             )
 
     def is_in_list_hosts_ctrls(self, host):
@@ -647,14 +647,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error list_instances_of_a_host: {0} code".format(excpt.message)
+                "Error list_instances_of_a_host({0}): {1} code".format(host, excpt.msg)
             )
 
     def list_started_instances_of_a_host(self, host):
@@ -671,14 +671,14 @@ class Jbosscli(object):
                     started.append(srvr)
             return started
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error list_instances_of_a_host: {0} code".format(excpt.message)
+                "Error list_instances_of_a_host({0}): {1} code".format(host, excpt.msg)
             )
 
     def get_state_of_a_host_instance(self, host, instance ):
@@ -706,14 +706,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error get_state_of_host_instance: {0} code".format(excpt.message)
+                "Error get_state_of_host_instance({0}, {1}): {1} code".format(host, instance, excpt.msg)
             )
 
     def list_instances_states_of_a_host(self, host):
@@ -742,7 +742,7 @@ class Jbosscli(object):
         """
         if not self.is_in_list_hosts_ctrls(host):
             raise CliError(
-                "Error stop_servers_of_a_host: host '{0}' is not started as a host controller.".format(host )
+                "Error stop_servers_of_a_host({0}): Host '{0}' is not started as a host controller.".format(host)
             )
         for x in self.list_instances_states_of_a_host(host):
             (hst, inst, sts) = x
@@ -758,7 +758,7 @@ class Jbosscli(object):
         """
         if not self.is_in_list_hosts_ctrls(host):
             raise CliError(
-                "Error start_servers_of_a_host: host '{0}' is not started as a host controller.".format(host)
+                "Error start_servers_of_a_host({0}): Host '{0}' is not started as a host controller.".format(host)
             )
         for x in self.list_instances_states_of_a_host(host):
             (hst, inst, sts) = x
@@ -775,11 +775,11 @@ class Jbosscli(object):
         try:
             if not self.is_in_list_hosts_ctrls(host):
                 raise CliError(
-                    "Error shutdown_host: host '{0}' is not started as a host controller.".format(host)
+                    "Error shutdown_host({0}): Host '{0}' is not started as a host controller.".format(host)
                 )
             if not self.domain:
                 raise CliError(
-                    "Error shutdown_host: It is not a domain server."
+                    "Error shutdown_host(0): It is not a domain server.".format(host)
                 )
             cmdo = '{"operation":"shutdown","child-type":"server","address":[{"host":"'
             cmdo += host
@@ -787,14 +787,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error shutdown_host: {0} code".format(excpt.message)
+                "Error shutdown_host({0}): {1} code".format(host, excpt.msg)
             )
 
     def stop_host_instance(self, host, instance):
@@ -803,16 +803,17 @@ class Jbosscli(object):
 
         :param host(str): Host name.
         :param instance(str): Server(instance) name.
-        :return:
+        :return: The result(str).
         """
         try:
             if not self.is_in_list_hosts_ctrls(host):
                 raise CliError(
-                    "Error stop_host_instance: host '{0}' is not started as a host controller.".format(host)
+                    "Error stop_host_instance({0},{1}): host '{0}' is not started as a host controller."
+                        .format(host,instance)
                 )
             if not self.domain:
                 raise CliError(
-                    "Error stop_host_instance: It is not a domain server."
+                    "Error stop_host_instance({0},{1}): It is not a domain server.".format(host, instance)
                 )
             cmdo = '{"operation":"stop","address":[{"host":"'
             cmdo += host
@@ -822,14 +823,14 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except CliError as excpt:
-            log.error(excpt.message)
+            log.error(excpt.msg)
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error stop_host_instance: {0} code".format(excpt.message)
+                "Error stop_host_instance({0},{1}): {2} code".format(host, instance, excpt.msg)
             )
 
     def start_host_instance(self, host, instance):
@@ -862,7 +863,7 @@ class Jbosscli(object):
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error start_host_instance: {0} code".format(excpt.message)
+                "Error start_host_instance({0},{1}): {2} code".format(host, instance, excpt.msg)
             )
 
     def stop_servers(self):
@@ -885,7 +886,7 @@ class Jbosscli(object):
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error stop_servers: {0} code".format(excpt.message)
+                "Error stop_servers: {0} .".format(excpt.msg)
             )
 
     def start_servers(self):
@@ -908,7 +909,7 @@ class Jbosscli(object):
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error stop_servers: {0} code".format(excpt.message)
+                "Error stop_servers: {0} .".format(excpt.msg)
             )
 
     def is_server_group(self, name):
@@ -943,7 +944,7 @@ class Jbosscli(object):
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error stop_server_group: {0} code".format(excpt.message)
+                "Error stop_server_group({0}): {1} .".format(srvrgrp, excpt.msg)
             )
 
     def start_server_group(self, srvrgrp):
@@ -969,7 +970,7 @@ class Jbosscli(object):
             raise excpt
         except Exception as excpt:
             raise CliError(
-                "Error stop_server_group: {0} code".format(excpt.message)
+                "Error stop_server_group({0}): {1}.".format(srvrgrp, excpt.msg)
             )
 
 # When err "failed" received from Domain ctrl or server standalone
