@@ -367,7 +367,7 @@ class Jbosscli(object):
         result = self._invoke_cli(
             '{"operation":"read-children-resources","child-type":"system-property"}'
         )
-        # return result['result']
+        return result['result']
 
     def is_server_state_started(self, host=None, instance=None):
         """Inform if the server(instance) is started
@@ -385,20 +385,20 @@ class Jbosscli(object):
                 cmdo += '"},{"server-config":"'
                 cmdo += instance
                 cmdo += '"}],"name":"status","json.pretty":1}'
-                # print cmdo
             else:
                 cmdo = '{"operation":"read-attribute","name":"status","json.pretty":1}'
             res = self._invoke_cli(cmdo)
             return res["result"] == "STARTED"
         except ServerError as excpt:
+            log.error(excpt.message)
             raise excpt
         except CliError as excpt:
+            log.error(excpt.message)
             raise excpt
         except Exception as excpt:
             raise CliError(
                 "Error is_server_state_started: {0} code".format(excpt.message)
             )
-
 
     def get_datasource_state(self, dtasrc, host=None, instance=None):
         """Get a datasource state
@@ -426,8 +426,10 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"][0]
         except ServerError as excpt:
+            log.error(excpt.message)
             raise excpt
         except CliError as excpt:
+            log.error(excpt.message)
             raise excpt
         except Exception as excpt:
             raise CliError(
@@ -445,8 +447,10 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
+            log.error(excpt.message)
             raise excpt
         except CliError as excpt:
+            log.error(excpt.message)
             raise excpt
         except Exception as excpt:
             raise CliError(
@@ -461,20 +465,22 @@ class Jbosscli(object):
         :return: List of datasource names
         """
         try:
-          cmdo = '{"operation":"read-children-names","child-type":"data-source","address":['
-          cmdo += '{"profile":"'
-          cmdo += profile
-          cmdo += '"},{"subsystem":"datasources"}],"json.pretty":1}'
-          res = self._invoke_cli(cmdo)
-          return res["result"]
+            cmdo = '{"operation":"read-children-names","child-type":"data-source","address":['
+            cmdo += '{"profile":"'
+            cmdo += profile
+            cmdo += '"},{"subsystem":"datasources"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
         except ServerError as excpt:
-          raise excpt
+            log.error(excpt.message)
+            raise excpt
         except CliError as excpt:
-          raise excpt
+            log.error(excpt.message)
+            raise excpt
         except Exception as excpt:
-          raise CliError(
-              "Error get_datasource_state: {0} code".format(excpt.message)
-          )
+            raise CliError(
+              "Error list_datasources_of_profile: {0} code".format(excpt.message)
+            )
 
     def get_profile_of_server_group(self, group):
         """Get the profile of a given server group
@@ -483,20 +489,22 @@ class Jbosscli(object):
         :return: The name of the profile
         """
         try:
-          cmdo = '{"operation":"read-attribute","name":"profile","address":['
-          cmdo += '{"server-group":"'
-          cmdo += group
-          cmdo += '"}],"json.pretty":1}'
-          res = self._invoke_cli(cmdo)
-          return res["result"]
+            cmdo = '{"operation":"read-attribute","name":"profile","address":['
+            cmdo += '{"server-group":"'
+            cmdo += group
+            cmdo += '"}],"json.pretty":1}'
+            res = self._invoke_cli(cmdo)
+            return res["result"]
         except ServerError as excpt:
-          raise excpt
+            log.error(excpt.message)
+            raise excpt
         except CliError as excpt:
-          raise excpt
+            log.error(excpt.message)
+            raise excpt
         except Exception as excpt:
-          raise CliError(
-              "Error get_datasource_state: {0} code".format(excpt.message)
-          )
+            raise CliError(
+              "Error get_profile_of_server_group: {0} code".format(excpt.message)
+            )
 
     def list_server_groups_of_profile(self, profile):
         """List the server groups of a given profile
@@ -505,13 +513,24 @@ class Jbosscli(object):
         :param profile: Profile name (str)
         :return: A list of server groups of a profile
         """
-        sgs = self.list_server_groups()
-        lst = []
-        for sg in sgs:
-            pf = self.get_profile_of_server_group(sg)
-            if pf == profile:
-                lst.append(sg)
-        return lst
+        try:
+            sgs = self.list_server_groups()
+            lst = []
+            for sg in sgs:
+                pf = self.get_profile_of_server_group(sg)
+                if pf == profile:
+                    lst.append(sg)
+            return lst
+        except ServerError as excpt:
+            log.error(excpt.message)
+            raise excpt
+        except CliError as excpt:
+            log.error(excpt.message)
+            raise excpt
+        except Exception as excpt:
+            raise CliError(
+                "Error list_server_groups_of_profile: {0} code".format(excpt.message)
+            )
 
     def get_server_group_of_host_instance(self, host, instance):
         """Get the server group of a given server group
@@ -531,8 +550,10 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
+            log.error(excpt.message)
             raise excpt
         except CliError as excpt:
+            log.error(excpt.message)
             raise excpt
         except Exception as excpt:
             raise CliError(
@@ -585,10 +606,15 @@ class Jbosscli(object):
 
         :return: List (list of str) of  host controllers names
         """
-        domsrv = unicode(self.controller.split(":")[0])
-        lsthsts = copy.copy(self.list_domain_hosts())
-        regex = re.compile("^" + domsrv)
-        return [x for i, x in enumerate(lsthsts) if not re.match(regex,x)]
+        try:
+            domsrv = unicode(self.controller.split(":")[0])
+            lsthsts = copy.copy(self.list_domain_hosts())
+            regex = re.compile("^" + domsrv)
+            return [x for i, x in enumerate(lsthsts) if not re.match(regex,x)]
+        except Exception as excpt:
+            raise CliError(
+                "Error list_datas_sources_states_of_host: {0} ".format(excpt.message)
+            )
 
     def is_in_list_hosts_ctrls(self, host):
         """Ask if a given host is in the list o host controllers
@@ -621,8 +647,10 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
+            log.error(excpt.message)
             raise excpt
         except CliError as excpt:
+            log.error(excpt.message)
             raise excpt
         except Exception as excpt:
             raise CliError(
@@ -643,8 +671,10 @@ class Jbosscli(object):
                     started.append(srvr)
             return started
         except ServerError as excpt:
+            log.error(excpt.message)
             raise excpt
         except CliError as excpt:
+            log.error(excpt.message)
             raise excpt
         except Exception as excpt:
             raise CliError(
@@ -676,8 +706,10 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
+            log.error(excpt.message)
             raise excpt
         except CliError as excpt:
+            log.error(excpt.message)
             raise excpt
         except Exception as excpt:
             raise CliError(
@@ -755,8 +787,10 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
+            log.error(excpt.message)
             raise excpt
         except CliError as excpt:
+            log.error(excpt.message)
             raise excpt
         except Exception as excpt:
             raise CliError(
@@ -788,8 +822,10 @@ class Jbosscli(object):
             res = self._invoke_cli(cmdo)
             return res["result"]
         except ServerError as excpt:
+            log.error(excpt.message)
             raise excpt
         except CliError as excpt:
+            log.error(excpt.message)
             raise excpt
         except Exception as excpt:
             raise CliError(
