@@ -16,7 +16,7 @@ class Jbosscli(object):
         self.credentials = auth.split(":")
         self._read_attributes()
 
-    def _read_attributes(self):
+    def _read_attributes(self): # pragma: no cover
         result = self._invoke_cli('{"operation":"read-resource"}')
 
         result = result['result']
@@ -56,9 +56,9 @@ class Jbosscli(object):
                 )
             )
 
-        except Exception as excpt:
+        except Exception as ex:
             raise ServerError(
-                "Error requesting: {0} code".format(excpt.msg)
+                "Error requesting: {0} code".format(str(ex))
             )
 
         log.debug("Finished request with response code: %i", r.status_code)

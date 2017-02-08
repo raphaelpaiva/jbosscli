@@ -40,7 +40,7 @@ class TestJbosscli(unittest.TestCase):
         self.assertEqual(actual_json_response, expected_json_response)
 
     @patch("jbosscli.requests.post", MagicMock(return_value=Struct(status_code=401, text=None)))
-    def test__invoke_cli_401_statuscode__should_raise_CliError(self):
+    def test_invoke_cli_401_statuscode__should_raise_CliError(self):
         with self.assertRaises(ServerError) as configmanager:
             Jbosscli("", "a:b")._invoke_cli("")
 
@@ -64,7 +64,7 @@ class TestJbosscli(unittest.TestCase):
             )
         )
     )
-    def test__invoke_cli_outcome_failed_should_raise_CliError(self):
+    def test_invoke_cli_outcome_failed_should_raise_CliError(self):
         json_response = {
             "outcome" : "failed",
             "failure-description" : "JBAS014792: Unknown attribute server-state",
@@ -88,14 +88,21 @@ class TestJbosscli(unittest.TestCase):
             )
         )
     )
-    def test__invoke_cli_ParserError_should_raise_CliError(self):
-
+    def test_invoke_cli_ParserError_should_raise_CliError(self):
         with self.assertRaises(CliError) as cm:
             Jbosscli("", "a:b")._invoke_cli("")
 
         clierror = cm.exception
         self.assertEqual(clierror.msg, "Unknown error: Parser error")
         self.assertEqual(clierror.raw, "Parser error")
+
+    @patch("jbosscli.requests.post", MagicMock(side_effect=Exception("OMG")))
+    def test_invoke_cli_RequestError_should_raise_ServerError(self):
+        with self.assertRaises(ServerError) as cm:
+            Jbosscli("", "a:b")._invoke_cli("")
+
+        server_error = cm.exception
+        self.assertEqual(server_error.msg, "Error requesting: OMG code")
 
     @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
     def test_get_server_groups_standalone_should_return_empty_list(self):
