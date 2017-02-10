@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import json
 import logging
 import requests
 import copy
@@ -17,7 +18,7 @@ class Jbosscli(object):
         self._read_attributes()
 
     def _read_attributes(self): # pragma: no cover
-        result = self._invoke_cli('{"operation":"read-resource"}')
+        result = self._invoke_cli({"operation": "read-resource"})
 
         result = result['result']
 
@@ -31,7 +32,7 @@ class Jbosscli(object):
         self.release_version = result['release-version']
 
         launch_type_result = self._invoke_cli(
-            '{"operation":"read-attribute", "name":"launch-type"}'
+            {"operation":"read-attribute", "name":"launch-type"}
         )
         self.domain = launch_type_result['result'] == "DOMAIN"
 
@@ -46,10 +47,11 @@ class Jbosscli(object):
         headers = {"Content-type": "application/json"}
 
         log.debug("Requesting %s -> %s", self.controller, command)
+
         try:
             r = requests.post(
                 url,
-                data=command,
+                data=json.dumps(command),
                 headers=headers,
                 auth=requests.auth.HTTPDigestAuth(
                     self.credentials[0], self.credentials[1]
@@ -80,14 +82,19 @@ class Jbosscli(object):
         return response
 
     def read_used_heap(self, host=None, server=None):
-        command = '{{"operation":"read-resource", "include-runtime":"true",\
-        "address":[{0}"core-service", "platform-mbean", "type", "memory"]}}'
-        address = ""
+        command = {
+            "operation": "read-resource",
+            "include-runtime": "true",
+            "address": [
+                "core-service",
+                "platform-mbean",
+                "type",
+                "memory"
+            ]
+        }
 
         if (host and server):
-            address = '"host","{0}","server","{1}", '.format(host, server)
-
-        command = command.format(address)
+            command["address"] = ["host", host, "server", server] + command["address"]
 
         result = self._invoke_cli(command)
 
@@ -126,14 +133,18 @@ class Jbosscli(object):
         return self._invoke_cli(command)
 
     def list_domain_hosts(self):
-        command = '{"operation":"read-children-names", "child-type":"host"}'
+        command = {"operation":"read-children-names", "child-type":"host"}
         result = self._invoke_cli(command)
         hosts = result['result']
         return hosts
 
     def list_servers(self, host):
-        command = '{{"operation":"read-children-names", "child-type":"server",\
-            "address":["host","{0}"]}}'.format(host)
+        command = {
+            "operation": "read-children-names",
+            "child-type": "server",
+            "address": ["host", host]
+        }
+
         result = self._invoke_cli(command)
 
         if result['outcome'] == "failed":
@@ -146,8 +157,10 @@ class Jbosscli(object):
         if (not self.domain):
             return []
 
-        command = '{"operation":"read-children-names",\
-        "child-type":"server-group"}'
+        command = {
+            "operation": "read-children-names",
+            "child-type": "server-group"
+        }
 
         result = self._invoke_cli(command)
 

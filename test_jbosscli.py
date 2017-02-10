@@ -104,5 +104,146 @@ class TestJbosscli(unittest.TestCase):
         server_error = cm.exception
         self.assertEqual(server_error.msg, "Error requesting: OMG code")
 
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_read_used_heap_standalone(self):
+
+        cli = Jbosscli("host:port", "a:b")
+        
+        cli._invoke_cli = MagicMock(
+            return_value={
+                "outcome": "success",
+                "result": {
+                    "heap-memory-usage": {
+                        "used": "1024",
+                        "max": "2048"
+                    }
+                }
+            }
+        )
+        result = cli.read_used_heap()
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "read-resource",
+            "include-runtime": "true",
+            "address": [
+                "core-service",
+                "platform-mbean",
+                "type",
+                "memory"
+            ]
+        })
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], 0.00000095367431640625)
+        self.assertEqual(result[1], 0.0000019073486328125)
+
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_read_used_heap_domain_should_add_instance_address(self):
+
+        cli = Jbosscli("host:port", "a:b")
+        
+        cli._invoke_cli = MagicMock(
+            return_value={
+                "outcome": "success",
+                "result": {
+                    "heap-memory-usage": {
+                        "used": "1024",
+                        "max": "2048"
+                    }
+                }
+            }
+        )
+        result = cli.read_used_heap(host="somehost", server="someinstance")
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "read-resource",
+            "include-runtime": "true",
+            "address": [
+                "host",
+                "somehost",
+                "server",
+                "someinstance",
+                "core-service",
+                "platform-mbean",
+                "type",
+                "memory"
+            ]
+        })
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], 0.00000095367431640625)
+        self.assertEqual(result[1], 0.0000019073486328125)
+
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_read_used_heap_not_successful_should_raise_CliError(self):
+
+        error_response = {
+            "outcome": "failure",
+            "result": {
+                "error": "Some Error String."
+            }
+        }
+
+        cli = Jbosscli("host:port", "a:b")
+        
+        cli._invoke_cli = MagicMock(
+            return_value=error_response
+        )
+
+        with self.assertRaises(CliError) as cm:
+            cli.read_used_heap()
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "read-resource",
+            "include-runtime": "true",
+            "address": [
+                "core-service",
+                "platform-mbean",
+                "type",
+                "memory"
+            ]
+        })
+
+        cli_error = cm.exception
+        self.assertEqual(cli_error.msg, error_response)
+
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_read_used_heap_successful_no_heap_information_should_raise_CliError(self):
+
+        error_response = {
+            "outcome": "success",
+            "result": {
+                "error": "Some Error String."
+            }
+        }
+
+        cli = Jbosscli("host:port", "a:b")
+        
+        cli._invoke_cli = MagicMock(
+            return_value=error_response
+        )
+
+        with self.assertRaises(CliError) as cm:
+            cli.read_used_heap()
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "read-resource",
+            "include-runtime": "true",
+            "address": [
+                "core-service",
+                "platform-mbean",
+                "type",
+                "memory"
+            ]
+        })
+
+        cli_error = cm.exception
+        self.assertEqual(cli_error.msg, error_response['result'])
+
+
 if __name__ == '__main__':
     unittest.main()
