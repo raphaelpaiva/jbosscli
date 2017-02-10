@@ -282,5 +282,29 @@ class TestJbosscli(unittest.TestCase):
             ]
         })
 
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_list_domain_hosts(self):
+        cli = Jbosscli("host:port", "a:b")
+
+        cli._invoke_cli = MagicMock(
+            return_value={
+                "outcome": "success",
+                "result": [
+                    "host1",
+                    "host2"
+                ]
+            }
+        )
+
+        hosts = cli.list_domain_hosts()
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "read-children-names",
+            "child-type": "host"
+        })
+
+        self.assertEqual(hosts, ["host1", "host2"])
+
 if __name__ == '__main__':
     unittest.main()
