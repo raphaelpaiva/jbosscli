@@ -244,6 +244,43 @@ class TestJbosscli(unittest.TestCase):
         cli_error = cm.exception
         self.assertEqual(cli_error.msg, error_response['result'])
 
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_restart_standalone(self):
+        cli = Jbosscli("host:port", "a:b")
+
+
+        cli._invoke_cli = MagicMock(
+            return_value={"outcome": "success"}
+        )
+
+        cli.restart()
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "shutdown",
+            "restart": "true"
+        })
+
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_restart_domain(self):
+        cli = Jbosscli("host:port", "a:b")
+
+        cli._invoke_cli = MagicMock(
+            return_value={"outcome": "success"}
+        )
+
+        cli.restart(host="somehost", server="someinstance")
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "restart",
+            "address": [
+                "host",
+                "somehost",
+                "server",
+                "someinstance"
+            ]
+        })
 
 if __name__ == '__main__':
     unittest.main()

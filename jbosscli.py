@@ -117,19 +117,19 @@ class Jbosscli(object):
         return (used_heap, max_heap)
 
     def restart(self, host=None, server=None):
-        command = '{{"operation":{0}{1}}}'
-        operation = ""
-        address = ""
+        command = {}
 
         if (host and server):
-            address = ', "address": ["host", "{0}","server-config", "{1}"]' \
-                .format(host, server)
-
-            operation = '"restart"'
+            command = {
+                "operation": "restart",
+                "address": [
+                    "host", host,
+                    "server", server
+                ]
+            }
         else:
-            operation = '"shutdown", "restart":"true"'
-
-        command = command.format(operation, address)
+            command = {"operation": "shutdown", "restart": "true"}
+        
         return self._invoke_cli(command)
 
     def list_domain_hosts(self):
