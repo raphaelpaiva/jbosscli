@@ -306,5 +306,57 @@ class TestJbosscli(unittest.TestCase):
 
         self.assertEqual(hosts, ["host1", "host2"])
 
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_list_servers_success(self):
+        cli = Jbosscli("host:port", "a:b")
+
+        cli._invoke_cli = MagicMock(
+            return_value={
+                "outcome": "success",
+                "result": [
+                    "instance1",
+                    "instance2"
+                ]
+            }
+        )
+
+        hosts = cli.list_servers("somehost")
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "read-children-names",
+            "child-type": "server",
+            "address": [
+                "host", "somehost"
+            ]
+        })
+
+        self.assertEqual(hosts, ["instance1", "instance2"])
+
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_list_servers_failure(self):
+        cli = Jbosscli("host:port", "a:b")
+
+        cli._invoke_cli = MagicMock(
+            return_value={
+                "outcome": "failed",
+                "failure-description": ":("
+            }
+        )
+
+        hosts = cli.list_servers("somehost")
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "read-children-names",
+            "child-type": "server",
+            "address": [
+                "host", "somehost"
+            ]
+        })
+
+        self.assertEqual(len(hosts), 0)
+
+
 if __name__ == '__main__':
     unittest.main()
