@@ -5,6 +5,7 @@ import logging
 import requests
 import copy
 import re
+import types
 
 
 log = logging.getLogger("jbosscli")
@@ -48,10 +49,12 @@ class Jbosscli(object):
 
         log.debug("Requesting %s -> %s", self.controller, command)
 
+        data = command if type(command) is types.StringType else json.dumps(command)
+
         try:
             r = requests.post(
                 url,
-                data=json.dumps(command),
+                data=data,
                 headers=headers,
                 auth=requests.auth.HTTPDigestAuth(
                     self.credentials[0], self.credentials[1]
@@ -163,12 +166,9 @@ class Jbosscli(object):
         }
 
         result = self._invoke_cli(command)
-
-        if result['outcome'] == "failed":
-            return []
-        else:
-            groups = result['result']
-            return groups
+        groups = result['result']
+        
+        return groups
 
     def get_server_groups(self):
         result = self.list_server_groups()
@@ -186,36 +186,35 @@ class Jbosscli(object):
         if (self.domain and not server_group):
             return self._get_all_assigned_deployments()
 
-        command = '{{"operation":"read-children-resources", \
-"child-type":"deployment"{0}}}'
+        command = {
+            "operation":"read-children-resources",
+            "child-type":"deployment"
+        }
 
         server_group_name = server_group.name if (
             server_group.__class__.__name__ is 'ServerGroup'
         ) else server_group
 
         if (self.domain):
-            command = command.format(
-                ', "address":["server-group","{0}"]'.format(server_group_name)
-            )
-        else:
-            command = command.format("")
+            command["address"] = [
+                "server-group",
+                server_group_name
+            ]
 
         result = self._invoke_cli(command)
 
         deployments = []
+        result = result['result']
 
-        if result['outcome'] != "failed":
-            result = result['result']
+        for item in result.values():
+            deployment = Deployment(
+                item['name'],
+                item['runtime-name'],
+                item['enabled'],
+                server_group=server_group
+            )
 
-            for item in result.values():
-                deployment = Deployment(
-                    item['name'],
-                    item['runtime-name'],
-                    item['enabled'],
-                    server_group=server_group
-                )
-
-                deployments.append(deployment)
+            deployments.append(deployment)
 
         return deployments
 
@@ -1021,8 +1020,13 @@ class Deployment:
             self.name,
             self.runtime_name,
             'enabled' if self.enabled else 'disabled',
-            " - " + self.server_group if self.server_group else ""
+            " - " + str(self.server_group) if self.server_group else ""
         )
+    def __eq__(self, other):
+        return self.name == other.name and \
+        self.runtime_name == other.runtime_name and \
+        self.enabled == other.enabled and \
+        self.server_group == other.server_group
 
 
 class ServerGroup:
@@ -1032,6 +1036,9 @@ class ServerGroup:
 
     def __str__(self):
         return self.name
+
+    def __eq__(self, other):
+        return self.name == other.name and self.deployments == other.deployments
 
 
 class ServerInstance:

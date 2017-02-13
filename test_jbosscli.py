@@ -357,6 +357,5 @@ class TestJbosscli(unittest.TestCase):
 
         self.assertEqual(len(hosts), 0)
 
-
 if __name__ == '__main__':
     unittest.main()
