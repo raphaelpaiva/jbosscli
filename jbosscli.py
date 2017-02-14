@@ -246,10 +246,11 @@ class Jbosscli(object):
             return all_deployments
 
     def _get_all_deployments(self):
-        response = self._invoke_cli(
-            '{"operation":"read-children-resources",\
-            "child-type":"deployment"}'
-        )
+        response = self._invoke_cli({
+            "operation":"read-children-resources",
+            "child-type":"deployment"
+        })
+
         result = response['result']
 
         deployments = []

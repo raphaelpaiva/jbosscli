@@ -241,5 +241,40 @@ class TestJbosscli(unittest.TestCase):
 
         self.assertEqual(deployments, expected_deployments)
 
+    @patch("jbosscli.Jbosscli._invoke_cli", MagicMock(return_value={
+        "outcome": "success",
+        "result": {
+            "name-version": {
+                "content": {},
+                "name": "name-version",
+                "runtime-name": "name.war"
+            },
+            "othername-version": {
+                "content": {},
+                "name": "othername-version",
+                "runtime-name": "othername.war"
+            }
+        }
+    }))
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_get_all_deployments(self):
+        cli = Jbosscli("a:b", "pass")
+
+        deployments = cli._get_all_deployments()
+
+        cli._invoke_cli.assert_called_with({
+            "operation": "read-children-resources",
+            "child-type": "deployment"
+        })
+
+        expected_deployments = [
+            Deployment("name-version", "name.war"),
+            Deployment("othername-version", "othername.war")
+        ]
+
+        deployments.sort(key=lambda d: d.name)
+
+        self.assertEqual(deployments, expected_deployments)
+
 if __name__ == '__main__':
     unittest.main()
