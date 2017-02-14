@@ -39,7 +39,7 @@ class TestJbosscli(unittest.TestCase):
 
     @patch("jbosscli.requests.post", MagicMock())
     @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_get_servers_groups_two_groups_should_return_sv_group_list(self):
+    def test_get_servers_groups_two_groups_no_deployments_should_return_sv_group_list(self):
         cli = Jbosscli("host:port", "a:b")
 
         cli.domain = True
@@ -60,6 +60,48 @@ class TestJbosscli(unittest.TestCase):
         expected_sv_groups = [
             ServerGroup("server-group1", []),
             ServerGroup("other-server-group", [])
+        ]
+
+        groups = cli.get_server_groups()
+
+        self.assertEqual(groups, expected_sv_groups)
+
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_get_servers_groups_two_groups_with_deployments_should_return_sv_group_list(self):
+        cli = Jbosscli("host:port", "a:b")
+
+        cli.domain = True
+
+        cli._invoke_cli = MagicMock(
+            return_value={
+                "outcome": "success",
+                "result": [
+                    "server-group1",
+                    "other-server-group"
+                ]
+            }
+        )
+        cli.get_assigned_deployments = MagicMock(
+            return_value=[
+                Deployment("abce-version", "abce.war", enabled=True),
+                Deployment("ecba-version", "ecba.war", enabled=False)
+            ]
+        )
+
+        expected_sv_groups = [
+            ServerGroup(
+                "server-group1", [
+                    Deployment("abce-version", "abce.war", enabled=True),
+                    Deployment("ecba-version", "ecba.war", enabled=False)
+                ]
+            ),
+
+            ServerGroup("other-server-group",  [
+                    Deployment("abce-version", "abce.war", enabled=True),
+                    Deployment("ecba-version", "ecba.war", enabled=False)
+                ]
+            )
         ]
 
         groups = cli.get_server_groups()
@@ -156,7 +198,7 @@ class TestJbosscli(unittest.TestCase):
         controller.get_assigned_deployments()
 
         controller._get_all_assigned_deployments.assert_called_once_with()
-        
+
 
 if __name__ == '__main__':
     unittest.main()
