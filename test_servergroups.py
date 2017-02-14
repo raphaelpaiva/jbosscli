@@ -97,7 +97,8 @@ class TestJbosscli(unittest.TestCase):
                 ]
             ),
 
-            ServerGroup("other-server-group",  [
+            ServerGroup(
+                "other-server-group",  [
                     Deployment("abce-version", "abce.war", enabled=True),
                     Deployment("ecba-version", "ecba.war", enabled=False)
                 ]
@@ -199,6 +200,46 @@ class TestJbosscli(unittest.TestCase):
 
         controller._get_all_assigned_deployments.assert_called_once_with()
 
+    @patch("jbosscli.requests.post", MagicMock())
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_get_all_assigned_deployments(self):
+        cli = Jbosscli("host:port", "a:b")
+
+        cli.domain = True
+
+        cli._invoke_cli = MagicMock(
+            return_value={
+                "outcome": "success",
+                "result": [
+                    "server-group1",
+                    "other-server-group"
+                ]
+            }
+        )
+
+        cli.get_server_groups = MagicMock(
+            return_value=[
+                ServerGroup("server-group1", [
+                    Deployment("abce-version", "abce.war", enabled=True),
+                    Deployment("ecba-version", "ecba.war", enabled=False)
+                ]),
+                ServerGroup("server-group2", [
+                    Deployment("abce-version2", "abce.war", enabled=True),
+                    Deployment("ecba-version2", "ecba.war", enabled=False)
+                ])
+            ]
+        )
+
+        deployments = cli._get_all_assigned_deployments()
+
+        expected_deployments = [
+            Deployment("abce-version", "abce.war", enabled=True),
+            Deployment("ecba-version", "ecba.war", enabled=False),
+            Deployment("abce-version2", "abce.war", enabled=True),
+            Deployment("ecba-version2", "ecba.war", enabled=False)
+        ]
+
+        self.assertEqual(deployments, expected_deployments)
 
 if __name__ == '__main__':
     unittest.main()
