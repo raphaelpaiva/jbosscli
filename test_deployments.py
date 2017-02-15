@@ -1,11 +1,14 @@
 import unittest
 from mock import MagicMock
 from mock import patch
+from mock import call
 
 import jbosscli
 from jbosscli import Jbosscli
 from jbosscli import ServerGroup
 from jbosscli import Deployment
+from jbosscli import ServerInstance
+from jbosscli import CliError
 
 class TestJbosscli(unittest.TestCase):
 
@@ -155,6 +158,171 @@ class TestJbosscli(unittest.TestCase):
         deployments.sort(key=lambda d: d.name)
 
         self.assertEqual(deployments, expected_deployments)
+
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_fetch_context_root_domain_single_instance(self):
+        cli = Jbosscli("a:b", "pass")
+        cli.domain = True
+        cli.instances = [ServerInstance("someinstance", "somehost")]
+        cli._invoke_cli = MagicMock(
+            return_value={
+                "outcome": "success",
+                "result": "/abcd"
+            })
+
+        deployment = Deployment("abcd-version", "abcd.war")
+        context_root = cli.fecth_context_root(deployment)
+
+        cli._invoke_cli.assert_called_once_with({
+            "operation": "read-attribute",
+            "name": "context-root",
+            "address": [
+                "host", "somehost",
+                "server", "someinstance",
+                "deployment", "abcd-version",
+                "subsystem", "web"
+            ]
+        })
+
+        self.assertEqual(context_root, "/abcd")
+
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_fetch_context_root_domain_two_instances_should_search_both(self):
+        cli = Jbosscli("a:b", "pass")
+        cli.domain = True
+        cli.instances = [
+            ServerInstance("someinstance", "somehost"),
+            ServerInstance("otherinstance", "somehost")
+        ]
+        cli._invoke_cli = MagicMock(
+            side_effect=[
+                CliError("Boom!"),
+                {
+                    "outcome": "success",
+                    "result": "/abcd"
+                }
+            ])
+
+        deployment = Deployment("abcd-version", "abcd.war")
+        context_root = cli.fecth_context_root(deployment)
+
+        calls = [
+            call({
+                "operation": "read-attribute",
+                "name": "context-root",
+                "address": [
+                    "host", "somehost",
+                    "server", "someinstance",
+                    "deployment", "abcd-version",
+                    "subsystem", "web"
+                ]
+            }),
+            call({
+                "operation": "read-attribute",
+                "name": "context-root",
+                "address": [
+                    "host", "somehost",
+                    "server", "otherinstance",
+                    "deployment", "abcd-version",
+                    "subsystem", "web"
+                ]
+            })
+        ]
+
+        cli._invoke_cli.assert_has_calls(calls)
+
+        self.assertEqual(context_root, "/abcd")
+
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_fetch_context_root_domain_two_empty_instances_should_search_both(self):
+        cli = Jbosscli("a:b", "pass")
+        cli.domain = True
+        cli.instances = [
+            ServerInstance("someinstance", "somehost"),
+            ServerInstance("otherinstance", "somehost")
+        ]
+        cli._invoke_cli = MagicMock(
+            side_effect=[
+                CliError("Boom!"),
+                CliError("Boom!")
+            ])
+
+        deployment = Deployment("abcd-version", "abcd.war")
+        context_root = cli.fecth_context_root(deployment)
+
+        calls = [
+            call({
+                "operation": "read-attribute",
+                "name": "context-root",
+                "address": [
+                    "host", "somehost",
+                    "server", "someinstance",
+                    "deployment", "abcd-version",
+                    "subsystem", "web"
+                ]
+            }),
+            call({
+                "operation": "read-attribute",
+                "name": "context-root",
+                "address": [
+                    "host", "somehost",
+                    "server", "otherinstance",
+                    "deployment", "abcd-version",
+                    "subsystem", "web"
+                ]
+            })
+        ]
+
+        cli._invoke_cli.assert_has_calls(calls)
+
+        self.assertIsNone(context_root)
+
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_fetch_context_root_standalone(self):
+        cli = Jbosscli("a:b", "pass")
+        cli.domain = False
+        cli._invoke_cli = MagicMock(
+            return_value={
+                "outcome": "success",
+                "result": "/abcd"
+            }
+        )
+
+        deployment = Deployment("abcd-version", "abcd.war")
+        context_root = cli.fecth_context_root(deployment)
+
+        cli._invoke_cli.assert_called_once_with({
+            "operation": "read-attribute",
+            "name": "context-root",
+            "address": [
+                "deployment", "abcd-version",
+                "subsystem", "web"
+            ]
+        })
+
+        self.assertEqual(context_root, "/abcd")
+
+    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    def test_fetch_context_root_standalone_inexisting_deployment_should_return_None(self):
+        cli = Jbosscli("a:b", "pass")
+        cli.domain = False
+        cli._invoke_cli = MagicMock(
+            side_effect=CliError('Boom!')
+        )
+
+        deployment = Deployment("abcd-version", "abcd.war")
+        context_root = cli.fecth_context_root(deployment)
+
+        cli._invoke_cli.assert_called_once_with({
+            "operation": "read-attribute",
+            "name": "context-root",
+            "address": [
+                "deployment", "abcd-version",
+                "subsystem", "web"
+            ]
+        })
+
+        self.assertIsNone(context_root)
 
 if __name__ == '__main__':
     unittest.main()

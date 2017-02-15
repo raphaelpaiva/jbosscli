@@ -355,25 +355,39 @@ class Jbosscli(object):
             for instance in instances:
                 context_root = ""
                 try:
-                    command = '{{"operation":"read-attribute",\
-                        "name":"context-root",\
-                        "address":["host","{0}","server","{1}",\
-                        "deployment","{2}","subsystem","web"]}}'
-                    command = command.format(
-                        instance.host, instance.name, deployment.name
-                    )
+                    command = {
+                        "operation": "read-attribute",
+                        "name": "context-root",
+                        "address": [
+                            "host", instance.host,
+                            "server", instance.name,
+                            "deployment", deployment.name,
+                            "subsystem", "web"
+                        ]
+                    }
+
                     result = self._invoke_cli(command)
                     context_root = result['result']
-                except:
+                except Exception:
                     pass
                 if context_root:
                     return context_root
             return None
         else:
-            command = '{{"operation":"read-attribute","name":"context-root",\
-            "address":["deployment","{0}","subsystem","web"]}}'
-            command = command.format(deployment.name)
-            result = self._invoke_cli(command)
+            command = {
+                "operation": "read-attribute",
+                "name": "context-root",
+                "address": [
+                    "deployment", deployment.name,
+                    "subsystem", "web"
+                ]
+            }
+
+            try:
+                result = self._invoke_cli(command)
+            except Exception:
+                return None
+
             return result['result']
 
     def get_system_properties(self):
