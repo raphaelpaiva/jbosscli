@@ -27,13 +27,13 @@ class TestJbosscli(unittest.TestCase):
             return_value=Struct(
                 status_code=200,
                 text=None,
-                json=MagicMock(return_value={"outcome" : "success"})
+                json=MagicMock(return_value={"outcome" : "success", "result": {}})
             )
         )
     )
     @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
     def test_invoke_cli_should_return_dict(self):
-        expected_json_response = {"outcome" : "success"}
+        expected_json_response = {}
 
         actual_json_response = Jbosscli("", "a:b")._invoke_cli("")
 
@@ -112,12 +112,9 @@ class TestJbosscli(unittest.TestCase):
         
         cli._invoke_cli = MagicMock(
             return_value={
-                "outcome": "success",
-                "result": {
-                    "heap-memory-usage": {
-                        "used": "1024",
-                        "max": "2048"
-                    }
+                "heap-memory-usage": {
+                    "used": "1024",
+                    "max": "2048"
                 }
             }
         )
@@ -146,12 +143,9 @@ class TestJbosscli(unittest.TestCase):
         
         cli._invoke_cli = MagicMock(
             return_value={
-                "outcome": "success",
-                "result": {
-                    "heap-memory-usage": {
-                        "used": "1024",
-                        "max": "2048"
-                    }
+                "heap-memory-usage": {
+                    "used": "1024",
+                    "max": "2048"
                 }
             }
         )
@@ -214,17 +208,10 @@ class TestJbosscli(unittest.TestCase):
     @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
     def test_read_used_heap_successful_no_heap_information_should_raise_CliError(self):
 
-        error_response = {
-            "outcome": "success",
-            "result": {
-                "error": "Some Error String."
-            }
-        }
-
         cli = Jbosscli("host:port", "a:b")
-        
+
         cli._invoke_cli = MagicMock(
-            return_value=error_response
+            side_effect=CliError("Some Error String.", {"error": "Some Error String."})
         )
 
         with self.assertRaises(CliError) as cm:
@@ -242,7 +229,7 @@ class TestJbosscli(unittest.TestCase):
         })
 
         cli_error = cm.exception
-        self.assertEqual(cli_error.msg, error_response['result'])
+        self.assertEqual(cli_error.msg, "Some Error String.")
 
     @patch("jbosscli.requests.post", MagicMock())
     @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
@@ -288,13 +275,10 @@ class TestJbosscli(unittest.TestCase):
         cli = Jbosscli("host:port", "a:b")
 
         cli._invoke_cli = MagicMock(
-            return_value={
-                "outcome": "success",
-                "result": [
-                    "host1",
-                    "host2"
-                ]
-            }
+            return_value=[
+                "host1",
+                "host2"
+            ]
         )
 
         hosts = cli.list_domain_hosts()
@@ -312,13 +296,10 @@ class TestJbosscli(unittest.TestCase):
         cli = Jbosscli("host:port", "a:b")
 
         cli._invoke_cli = MagicMock(
-            return_value={
-                "outcome": "success",
-                "result": [
-                    "instance1",
-                    "instance2"
-                ]
-            }
+            return_value=[
+                "instance1",
+                "instance2"
+            ]
         )
 
         hosts = cli.list_servers("somehost")
@@ -339,13 +320,11 @@ class TestJbosscli(unittest.TestCase):
         cli = Jbosscli("host:port", "a:b")
 
         cli._invoke_cli = MagicMock(
-            return_value={
-                "outcome": "failed",
-                "failure-description": ":("
-            }
+            side_effect=CliError("Some Error String.", {"error": "Some Error String."})
         )
 
-        hosts = cli.list_servers("somehost")
+        with self.assertRaises(CliError) as cm:
+            hosts = cli.list_servers("somehost")
 
         cli._invoke_cli.assert_called_with({
             "operation": "read-children-names",
@@ -355,7 +334,8 @@ class TestJbosscli(unittest.TestCase):
             ]
         })
 
-        self.assertEqual(len(hosts), 0)
+        cli_error = cm.exception
+        self.assertEqual(cli_error.msg, "Some Error String.")
 
 if __name__ == '__main__':
     unittest.main()

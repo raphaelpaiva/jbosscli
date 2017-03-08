@@ -1,4 +1,7 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+"""Este módulo define apenas uma classe para interface com jboss wildfly/eap 6+"""
 
 import json
 import logging
@@ -21,7 +24,7 @@ class Jbosscli(object):
     def _read_attributes(self): # pragma: no cover
         result = self._invoke_cli({"operation": "read-resource"})
 
-        result = result['result']
+        result = result
 
         self.management_major_version = result['management-major-version']
         self.management_micro_version = result['management-micro-version']
@@ -35,9 +38,9 @@ class Jbosscli(object):
         launch_type_result = self._invoke_cli(
             {"operation":"read-attribute", "name":"launch-type"}
         )
-        self.domain = launch_type_result['result'] == "DOMAIN"
+        self.domain = launch_type_result == "DOMAIN"
 
-        if (self.domain):
+        if self.domain:
             self.profiles = list(result['profile'].keys())
             self.instances = self._discover_instances()
         else:
@@ -49,7 +52,7 @@ class Jbosscli(object):
 
         log.debug("Requesting %s -> %s", self.controller, command)
 
-        data = command if type(command) is types.StringType else json.dumps(command)
+        data = command if isinstance(command, types.StringType) else json.dumps(command)
 
         try:
             r = requests.post(
@@ -82,7 +85,7 @@ class Jbosscli(object):
         if response['outcome'] != "success":
             raise CliError(response['failure-description'], response)
 
-        return response
+        return response['result']
 
     def read_used_heap(self, host=None, server=None):
         command = {
@@ -100,11 +103,6 @@ class Jbosscli(object):
             command["address"] = ["host", host, "server", server] + command["address"]
 
         result = self._invoke_cli(command)
-
-        if result['outcome'] != "success":
-            raise CliError(result)
-
-        result = result['result']
 
         if 'heap-memory-usage' not in result:
             raise CliError(result)
@@ -137,8 +135,7 @@ class Jbosscli(object):
 
     def list_domain_hosts(self):
         command = {"operation":"read-children-names", "child-type":"host"}
-        result = self._invoke_cli(command)
-        hosts = result['result']
+        hosts = self._invoke_cli(command) 
         return hosts
 
     def list_servers(self, host):
@@ -148,13 +145,7 @@ class Jbosscli(object):
             "address": ["host", host]
         }
 
-        result = self._invoke_cli(command)
-
-        if result['outcome'] == "failed":
-            return []
-        else:
-            servers = result['result']
-            return servers
+        return self._invoke_cli(command)
 
     def list_server_groups(self):
         if (not self.domain):
@@ -165,10 +156,7 @@ class Jbosscli(object):
             "child-type": "server-group"
         }
 
-        result = self._invoke_cli(command)
-        groups = result['result']
-        
-        return groups
+        return self._invoke_cli(command)
 
     def get_server_groups(self):
         result = self.list_server_groups()
@@ -195,7 +183,7 @@ class Jbosscli(object):
             server_group.__class__.__name__ is 'ServerGroup'
         ) else server_group
 
-        if (self.domain):
+        if self.domain:
             command["address"] = [
                 "server-group",
                 server_group_name
@@ -204,7 +192,6 @@ class Jbosscli(object):
         result = self._invoke_cli(command)
 
         deployments = []
-        result = result['result']
 
         for item in result.values():
             deployment = Deployment(
@@ -251,24 +238,26 @@ class Jbosscli(object):
             "child-type":"deployment"
         })
 
-        result = response['result']
+        result = response
 
         deployments = []
 
-        for item in result.values():
+        for name, item in result.iteritems():
             deployment = Deployment(item['name'], item['runtime-name'])
             deployments.append(deployment)
 
         return deployments
 
     def list_datasources(self):
-        command = '{{"operation":"read-children-resources",\
-"child-type":"data-source","address":[{0}"subsystem","datasources"]}}'
+        command = {
+            "operation": "read-children-resources",
+            "child-type": "data-source"
+        }
 
-        if (not self.domain):
-            command = command.format("")
+        if not self.domain:
+            command['address'] = ["subsystem", "datasources"]
             response = self._invoke_cli(command)
-            datasources = response['result']
+            datasources = response
 
             enabled_datasources = self._filter_enabled_datasources(datasources)
 
@@ -279,12 +268,14 @@ class Jbosscli(object):
         else:
             datasources_by_server_instance = {}
             for instance in self.instances:
-                address = '"host","{0}","server","{1}",'.format(
-                    instance.host,
-                    instance.name
-                )
-                response = self._invoke_cli(command.format(address))
-                datasources = response['result']
+                command['address'] = [
+                    "host", instance.host,
+                    "server", instance.name,
+                    "subsystem", "datasources"
+                ]
+
+                response = self._invoke_cli(command)
+                datasources = response
                 datasources_by_server_instance[instance] = \
                     self._filter_enabled_datasources(datasources)
 
@@ -300,19 +291,26 @@ class Jbosscli(object):
         return enabled_datasources
 
     def read_datasource_statistics(self, datasource, server_instance=None):
-        address = ""
+        address = []
 
-        if (self.domain):
-            address = '"host","{0}","server","{1}",'.format(
-                server_instance.host, server_instance.name
-            )
+        if self.domain:
+            address = [
+                "host", server_instance.host,
+                "server", server_instance.name
+            ]
 
-        command = '{{"operation":"read-resource","include-runtime":"true",\
-            "address":[{0}"subsystem","datasources","data-source",\
-            "{1}","statistics","pool"]}}'.format(address, datasource)
+        command = {
+            "operation": "read-resource",
+            "include-runtime":"true",
+            address: address.extend([
+                "subsystem", "datasources",
+                "data-source", datasource,
+                "statistics","pool"
+            ])
+        }
 
         response = self._invoke_cli(command)
-        return response['result']
+        return response
 
     def _discover_instances(self):
         hosts = self.list_domain_hosts()
@@ -337,16 +335,20 @@ class Jbosscli(object):
         return instances
 
     def flush_idle_connections(self, ds, instance):
-        command = '{{"operation":"flush-idle-connection-in-pool",\
-"address":[{0}"subsystem","datasources","data-source","{1}"]}}'
-        target = ""
+        command = {
+            "operation": "flush-idle-connection-in-pool",
+            "address": [
+                "subsystem", "datasources",
+                "data-source", ds
+            ]
+        }
 
-        if (self.domain):
-            target = '"host","{0}","server","{1}",'.format(
-                instance.host, instance.name
-            )
+        if self.domain:
+            command['address'] = [
+                "host", instance.host,
+                "server", instance.name
+            ] + command['address']
 
-        command = command.format(target, ds)
         return self._invoke_cli(command)
 
     def fecth_context_root(self, deployment):
@@ -366,8 +368,7 @@ class Jbosscli(object):
                         ]
                     }
 
-                    result = self._invoke_cli(command)
-                    context_root = result['result']
+                    context_root = self._invoke_cli(command)
                 except Exception:
                     pass
                 if context_root:
@@ -388,13 +389,15 @@ class Jbosscli(object):
             except Exception:
                 return None
 
-            return result['result']
+            return result
 
     def get_system_properties(self):
-        result = self._invoke_cli(
-            '{"operation":"read-children-resources","child-type":"system-property"}'
-        )
-        return result['result']
+        command = {
+            "operation": "read-children-resources",
+            "child-type": "system-property"
+        }
+
+        return self._invoke_cli(command)
 
     def is_server_state_started(self, host=None, instance=None):
         """Inform if the server(instance) is started

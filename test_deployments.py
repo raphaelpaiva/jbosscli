@@ -32,7 +32,14 @@ class TestJbosscli(unittest.TestCase):
 
         controller.get_assigned_deployments(group)
 
-        jbosscli.Jbosscli._invoke_cli.assert_called_with({"operation":"read-children-resources", "child-type":"deployment", "address":["server-group","test-server-group"]})
+        jbosscli.Jbosscli._invoke_cli.assert_called_with({
+            "operation": "read-children-resources",
+            "child-type": "deployment",
+            "address": [
+                "server-group",
+                "test-server-group"
+            ]
+        })
 
 
     @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
@@ -43,20 +50,17 @@ class TestJbosscli(unittest.TestCase):
 
         controller._invoke_cli = MagicMock(
             return_value={
-                "outcome": "success",
-                "result": {
-                    "abce-version": {
-                        "enabled": True,
-                        "name": "abce-version",
-                        "runtime-name": "abce.war"
-                    },
-                    "ecba-version": {
-                        "enabled": False,
-                        "name": "ecba-version",
-                        "runtime-name": "ecba.war"
-                    }
-
+                "abce-version": {
+                    "enabled": True,
+                    "name": "abce-version",
+                    "runtime-name": "abce.war"
+                },
+                "ecba-version": {
+                    "enabled": False,
+                    "name": "ecba-version",
+                    "runtime-name": "ecba.war"
                 }
+
             }
         )
 
@@ -125,18 +129,15 @@ class TestJbosscli(unittest.TestCase):
         self.assertEqual(deployments, expected_deployments)
 
     @patch("jbosscli.Jbosscli._invoke_cli", MagicMock(return_value={
-        "outcome": "success",
-        "result": {
-            "name-version": {
-                "content": {},
-                "name": "name-version",
-                "runtime-name": "name.war"
-            },
-            "othername-version": {
-                "content": {},
-                "name": "othername-version",
-                "runtime-name": "othername.war"
-            }
+        "name-version": {
+            "content": {},
+            "name": "name-version",
+            "runtime-name": "name.war"
+        },
+        "othername-version": {
+            "content": {},
+            "name": "othername-version",
+            "runtime-name": "othername.war"
         }
     }))
     @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
@@ -165,10 +166,7 @@ class TestJbosscli(unittest.TestCase):
         cli.domain = True
         cli.instances = [ServerInstance("someinstance", "somehost")]
         cli._invoke_cli = MagicMock(
-            return_value={
-                "outcome": "success",
-                "result": "/abcd"
-            })
+            return_value="/abcd")
 
         deployment = Deployment("abcd-version", "abcd.war")
         context_root = cli.fecth_context_root(deployment)
@@ -197,10 +195,7 @@ class TestJbosscli(unittest.TestCase):
         cli._invoke_cli = MagicMock(
             side_effect=[
                 CliError("Boom!"),
-                {
-                    "outcome": "success",
-                    "result": "/abcd"
-                }
+                "/abcd"
             ])
 
         deployment = Deployment("abcd-version", "abcd.war")
@@ -282,10 +277,7 @@ class TestJbosscli(unittest.TestCase):
         cli = Jbosscli("a:b", "pass")
         cli.domain = False
         cli._invoke_cli = MagicMock(
-            return_value={
-                "outcome": "success",
-                "result": "/abcd"
-            }
+            return_value="/abcd"
         )
 
         deployment = Deployment("abcd-version", "abcd.war")

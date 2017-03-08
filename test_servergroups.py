@@ -19,13 +19,10 @@ class TestJbosscli(unittest.TestCase):
         cli.domain = True
 
         cli._invoke_cli = MagicMock(
-            return_value={
-                "outcome": "success",
-                "result": [
-                    "server-group1",
-                    "other-server-group"
-                ]
-            }
+            return_value=[
+                "server-group1",
+                "other-server-group"
+            ]
         )
 
         groups = cli.list_server_groups()
@@ -45,13 +42,10 @@ class TestJbosscli(unittest.TestCase):
         cli.domain = True
 
         cli._invoke_cli = MagicMock(
-            return_value={
-                "outcome": "success",
-                "result": [
-                    "server-group1",
-                    "other-server-group"
-                ]
-            }
+            return_value=[
+                "server-group1",
+                "other-server-group"
+            ]
         )
         cli.get_assigned_deployments = MagicMock(
             return_value=[]
@@ -74,13 +68,10 @@ class TestJbosscli(unittest.TestCase):
         cli.domain = True
 
         cli._invoke_cli = MagicMock(
-            return_value={
-                "outcome": "success",
-                "result": [
-                    "server-group1",
-                    "other-server-group"
-                ]
-            }
+            return_value=[
+                "server-group1",
+                "other-server-group"
+            ]
         )
         cli.get_assigned_deployments = MagicMock(
             return_value=[
