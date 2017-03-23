@@ -3,13 +3,12 @@
 Jbosscli
 """
 
+# apagar estes imports
+import time
+
 import json
 import types
 import requests
-
-
-# apagar estes imports
-import time
 
 class Jbosscli(object):
     """Jbosscli"""
@@ -20,6 +19,7 @@ class Jbosscli(object):
         self._fetch_domain_data()
 
     def invoke_cli(self, command):
+        """Calls Jboss management interface"""
         url = "http://{0}/management".format(self.controller)
         headers = {"Content-type": "application/json"}
 
@@ -112,18 +112,19 @@ class Jbosscli(object):
         self.data["server-groups"] = server_groups
 
 class CliError(Exception):
-    """CliError"""
+    """Generic class representing runtime errors in the server"""
     def __init__(self, msg, raw=None):
+        super(CliError, self).__init__()
         self.msg = msg
         self.raw = raw if raw else self.msg
 
     def __str__(self):
         return repr(self.msg)
 
-
-# @description When err na communicating with Domain ctrl or server standalone
 class ServerError(Exception):
+    """Represents unrecoverable error in the communicating with the controller"""
     def __init__(self, msg, raw=None):
+        super(ServerError, self).__init__()
         self.msg = msg
         self.raw = raw if raw else self.msg
 
@@ -171,6 +172,8 @@ class Host(object):
 
         return self.controller.invoke_cli(command)
 
+
+
 class Instance(object):
     """Represents a server instance with runtime information"""
     def __init__(self, data, parent_host=None):
@@ -178,6 +181,29 @@ class Instance(object):
         self.server_group_name = data["group"]
         self.status = data["status"]
         self.host = parent_host
+        self.datasources = self._read_datasources()
+
+    def _read_datasources(self):
+        command = {
+            "operation": "read-children-resources",
+            "child-type": "data-source",
+            "include-runtime": True,
+            "recursive": True,
+            "address": [
+                "host", self.host.name,
+                "server", self.name,
+                "subsystem", "datasources"
+            ]
+        }
+
+        resp = self.host.controller.invoke_cli(command)
+
+        datasources = []
+        for name, ds_data in resp.iteritems():
+            ds_data["name"] = name
+            datasources.append(DataSource(ds_data))
+
+        return datasources
 
     def __str__(self):
         return self.name
@@ -190,7 +216,39 @@ class Instance(object):
         return self.host.read_memory_status(self)
 
     def running(self):
+        """Return True if status is \"STARTED\""""
         return self.status == "STARTED"
+
+class DataSource(object):
+    """Represents a datasource and some of its runtime metrics"""
+    def __init__(self, data):
+        self.name = data["name"]
+        self.connection_url = data["connection-url"]
+        self.jndi_name = data["jndi-name"]
+        self.driver_class = data["driver-class"]
+        self.driver_name = data["driver-name"]
+        self.enabled = data["enabled"]
+        self.jta = data["jta"]
+        self.max_pool_size = data["max-pool-size"]
+        self.min_pool_size = data["min-pool-size"]
+        self.username = data["user-name"]
+
+        pool_stats = data["statistics"]["pool"]
+
+        self.active_connections = pool_stats["ActiveCount"]
+        self.available_connections = pool_stats["AvailableCount"]
+        self.created_connections = pool_stats["CreatedCount"]
+        self.destroyed_connections = pool_stats["DestroyedCount"]
+        self.in_use_connections = pool_stats["InUseCount"]
+        self.max_used_connections = pool_stats["MaxUsedCount"]
+        self.max_wait_time = pool_stats["MaxWaitTime"]
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class ServerGroup(object):
     """Represents a server group configuration"""
@@ -220,34 +278,44 @@ class Deployment(object):
         self.runtime_name == other.runtime_name and \
         self.enabled == other.enabled
 
+
 ## -- ##
 
 def test(controller):
+    """ugly test function"""
     antes = time.time()
-    CLI = Jbosscli(controller, "jboss:jboss@123")
+    cli = Jbosscli(controller, "jboss:jboss@123")
     depois = time.time()
 
     print "criar ", controller, depois - antes
 
-    buffer = []
+    output_buffer = []
     antes = time.time()
-    for host in CLI.data["host"]:
-        if CLI.domain:
+    for host in cli.data["host"]:
+        if cli.domain:
             for instance in host.instances:
                 if instance.running():
-                    buffer.append("{0} {1} {2}.".format(
+                    output_buffer.append("{0} {1} {2}.".format(
                         host.name,
                         instance.name,
-                        float(instance.read_memory_status()["heap-memory-usage"]["used"]) / 1024.0 / 1024.0 / 1024.0
+                        float(
+                            instance.read_memory_status()["heap-memory-usage"]["used"]
+                        ) / 1024.0 / 1024.0 / 1024.0
                     ))
+
+                    output_buffer.append("datasources: {0}".format(instance.datasources))
                 else:
-                    buffer.append("{0} {1} not running.".format(host.name, instance.name))
+                    output_buffer.append("{0} {1} not running.".format(host.name, instance.name))
         else:
-            buffer.append("standalone {0}".format(host.read_memory_status()["heap-memory-usage"]["used"]))
+            output_buffer.append(
+                "standalone {0}".format(
+                    host.read_memory_status()["heap-memory-usage"]["used"]
+                )
+            )
     depois = time.time()
 
     print "Memoria", controller, depois - antes
-    #print '\n'.join(buffer)
+    print '\n'.join(output_buffer)
 
 if __name__ == "__main__":
     test("serie1cabrio:9990")
