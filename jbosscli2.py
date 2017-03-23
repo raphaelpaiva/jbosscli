@@ -61,23 +61,23 @@ class Jbosscli(object):
             "include-runtime": "true"
         })
 
-        self.data["name"] = data["name"]
-        self.data["product-name"] = data["product-name"]
-        self.data["product-version"] = data["product-version"]
-        self.data["release-codename"] = data["release-codename"]
-        self.data["release-version"] = data["release-version"]
+        self.name = data["name"]
+        self.product_name = data["product-name"]
+        self.product_version = data["product-version"]
+        self.release_codename = data["release-codename"]
+        self.release_version = data["release-version"]
 
         self.domain = data["launch-type"] == "DOMAIN"
         if self.domain:
-            self.data["local-host-name"] = data["local-host-name"]
-            self.data["host"] = []
+            self.local_host_name = data["local-host-name"]
+            self.hosts = []
             self._fetch_host_data()
             self._fetch_server_group_data()
         else:
-            standalone_data = self.data.copy()
-            standalone_data["name"] = self.data["name"] + " - Standalone"
+            standalone_data = data.copy()
+            standalone_data["name"] = self.name + " - Standalone"
             standalone_data["master"] = True
-            self.data["host"] = [Host(standalone_data, self)]
+            self.hosts = [Host(standalone_data, self)]
 
     def _fetch_host_data(self):
         hosts = self.invoke_cli({
@@ -89,7 +89,7 @@ class Jbosscli(object):
 
         for key in hosts:
             host_data = hosts[key]
-            self.data["host"].append(
+            self.hosts.append(
                 Host(host_data, controller=self)
             )
 
@@ -291,7 +291,7 @@ def test(controller):
 
     output_buffer = []
     antes = time.time()
-    for host in cli.data["host"]:
+    for host in cli.hosts:
         if cli.domain:
             for instance in host.instances:
                 if instance.running():
