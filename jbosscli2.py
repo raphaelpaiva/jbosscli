@@ -3,9 +3,6 @@
 Jbosscli
 """
 
-# apagar estes imports
-import time
-
 import json
 import types
 import requests
@@ -16,7 +13,7 @@ class Jbosscli(object):
         self.controller = controller
         self.credentials = auth.split(":")
         self.data = {}
-        self._fetch_domain_data()
+        self._fetch_controller_data()
 
     def invoke_cli(self, command):
         """Calls Jboss management interface"""
@@ -55,9 +52,10 @@ class Jbosscli(object):
 
         return response['result']
 
-    def _fetch_domain_data(self):
+    def _fetch_controller_data(self):
         data = self.invoke_cli({
             "operation": "read-resource",
+            "recursive-depth": 1,
             "include-runtime": "true"
         })
 
@@ -72,6 +70,7 @@ class Jbosscli(object):
             self.local_host_name = data["local-host-name"]
             self.hosts = []
             self._fetch_host_data()
+            self.server_groups = []
             self._fetch_server_group_data()
         else:
             standalone_data = data.copy()
@@ -86,6 +85,7 @@ class Jbosscli(object):
             "recursive-depth": 1,
             "include-runtime": True
         })
+
 
         for key in hosts:
             host_data = hosts[key]
@@ -106,10 +106,7 @@ class Jbosscli(object):
             group = data[key]
             group["name"] = key
 
-            server_groups[key] = ServerGroup(group)
-
-
-        self.data["server-groups"] = server_groups
+            self.server_groups.append(ServerGroup(group, controller=self))
 
 class CliError(Exception):
     """Generic class representing runtime errors in the server"""
@@ -142,6 +139,14 @@ class Host(object):
         self.master = data["master"]
         self.status = data["host-state"] if "host-state" in data else None
         self.controller = controller
+
+        if not self.controller.domain:
+            self.deployments = [
+                Deployment(d, server_group=None, controller=controller)
+                for d in data["deployment"].values()
+            ]
+        else:
+            self.deployments = None
 
         if not self.master:
             self.instances = [
@@ -233,15 +238,16 @@ class DataSource(object):
         self.min_pool_size = data["min-pool-size"]
         self.username = data["user-name"]
 
-        pool_stats = data["statistics"]["pool"]
+        if "statistics-enabled" in data:
+            pool_stats = data["statistics"]["pool"]
 
-        self.active_connections = pool_stats["ActiveCount"]
-        self.available_connections = pool_stats["AvailableCount"]
-        self.created_connections = pool_stats["CreatedCount"]
-        self.destroyed_connections = pool_stats["DestroyedCount"]
-        self.in_use_connections = pool_stats["InUseCount"]
-        self.max_used_connections = pool_stats["MaxUsedCount"]
-        self.max_wait_time = pool_stats["MaxWaitTime"]
+            self.active_connections = pool_stats["ActiveCount"]
+            self.available_connections = pool_stats["AvailableCount"]
+            self.created_connections = pool_stats["CreatedCount"]
+            self.destroyed_connections = pool_stats["DestroyedCount"]
+            self.in_use_connections = pool_stats["InUseCount"]
+            self.max_used_connections = pool_stats["MaxUsedCount"]
+            self.max_wait_time = pool_stats["MaxWaitTime"]
 
     def __str__(self):
         return self.name
@@ -252,20 +258,26 @@ class DataSource(object):
 
 class ServerGroup(object):
     """Represents a server group configuration"""
-    def __init__(self, data):
+    def __init__(self, data, controller=None):
         self.name = data["name"]
         self.profile = data["profile"]
         self.socket_binding_group = data["socket-binding-group"]
         self.socket_binding_port_offset = data["socket-binding-port-offset"]
+        self.controller = controller
 
-        self.deployments = [Deployment(d) for d in data["deployment"].values()]
+        self.deployments = [
+            Deployment(d, self, controller=controller)
+            for d in data["deployment"].values()
+        ]
 
 class Deployment(object):
     """Represents a Deployment in the server, enabled or not"""
-    def __init__(self, data):
+    def __init__(self, data, server_group, controller=None):
         self.name = data["name"]
         self.runtime_name = data["runtime-name"]
         self.enabled = data["enabled"]
+        self.controller = controller
+        self.server_group = server_group
 
     def __str__(self):
         return "{0} - {1} - {2}".format(
@@ -273,53 +285,59 @@ class Deployment(object):
             self.runtime_name,
             'enabled' if self.enabled else 'disabled'
         )
+    def __repr__(self):
+        return 'Deployment({{"name":"{0}", "runtime-name":"{1}", "enabled":"{2}"}})'.format(
+            self.name,
+            self.runtime_name,
+            self.enabled
+        )
+
     def __eq__(self, other):
         return self.name == other.name and \
         self.runtime_name == other.runtime_name and \
         self.enabled == other.enabled
 
+    def get_context_root(self):
+        """Scan the server for the context root of the deployment if it is enabled"""
+        if not self.enabled or self.runtime_name.endswith(".jar"):
+            return None
+        if self.controller.domain:
+            insts = []
+            map(lambda x: insts.extend(x.instances), self.controller.hosts)
 
-## -- ##
+            for instance in insts:
+                context_root = ""
+                try:
+                    command = {
+                        "operation": "read-attribute",
+                        "name": "context-root",
+                        "address": [
+                            "host", instance.host.name,
+                            "server", instance.name,
+                            "deployment", self.name,
+                            "subsystem", "web"
+                        ]
+                    }
 
-def test(controller):
-    """ugly test function"""
-    antes = time.time()
-    cli = Jbosscli(controller, "jboss:jboss@123")
-    depois = time.time()
-
-    print "criar ", controller, depois - antes
-
-    output_buffer = []
-    antes = time.time()
-    for host in cli.hosts:
-        if cli.domain:
-            for instance in host.instances:
-                if instance.running():
-                    output_buffer.append("{0} {1} {2}.".format(
-                        host.name,
-                        instance.name,
-                        float(
-                            instance.read_memory_status()["heap-memory-usage"]["used"]
-                        ) / 1024.0 / 1024.0 / 1024.0
-                    ))
-
-                    output_buffer.append("datasources: {0}".format(instance.datasources))
-                else:
-                    output_buffer.append("{0} {1} not running.".format(host.name, instance.name))
+                    context_root = self.controller.invoke_cli(command)
+                except Exception:
+                    pass
+                if context_root:
+                    return context_root
+            return None
         else:
-            output_buffer.append(
-                "standalone {0}".format(
-                    host.read_memory_status()["heap-memory-usage"]["used"]
-                )
-            )
-    depois = time.time()
+            command = {
+                "operation": "read-attribute",
+                "name": "context-root",
+                "address": [
+                    "deployment", self.name,
+                    "subsystem", "web"
+                ]
+            }
 
-    print "Memoria", controller, depois - antes
-    print '\n'.join(output_buffer)
+            try:
+                result = self.controller.invoke_cli(command)
+            except Exception:
+                return None
 
-if __name__ == "__main__":
-    test("serie1cabrio:9990")
-    test("audia1:9990")
-    test("vmpassijuw:9990")
-    test("vmpassijuw:19990")
-    test("atron:29990")
+            return result

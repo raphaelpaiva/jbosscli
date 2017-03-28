@@ -1,0 +1,320 @@
+{
+  "server-groups": {
+    "siga": {
+      "profile": "sigadoc", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "blucservice-201703151": {
+          "runtime-name": "blucservice.war", 
+          "enabled": true, 
+          "name": "blucservice-201703151"
+        }, 
+        "tnusigner-201702161": {
+          "runtime-name": "tnusigner.war", 
+          "enabled": true, 
+          "name": "tnusigner-201702161"
+        }, 
+        "apolosignersjes-201702161": {
+          "runtime-name": "apolosignersjes.war", 
+          "enabled": true, 
+          "name": "apolosignersjes-201702161"
+        }, 
+        "apolosignersjrj-201702161": {
+          "runtime-name": "apolosignersjrj.war", 
+          "enabled": true, 
+          "name": "apolosignersjrj-201702161"
+        }, 
+        "djesigner-201702161": {
+          "runtime-name": "djesigner.war", 
+          "enabled": true, 
+          "name": "djesigner-201702161"
+        }, 
+        "sqljdbc4.jar": {
+          "runtime-name": "sqljdbc4.jar", 
+          "enabled": true, 
+          "name": "sqljdbc4.jar"
+        }, 
+        "apolosignertrf2-201702161": {
+          "runtime-name": "apolosignertrf2.war", 
+          "enabled": true, 
+          "name": "apolosignertrf2-201702161"
+        }, 
+        "apoloexpsignersjes-201702161": {
+          "runtime-name": "apoloexpsignersjes.war", 
+          "enabled": true, 
+          "name": "apoloexpsignersjes-201702161"
+        }, 
+        "apoloexpsignersjrj-201702161": {
+          "runtime-name": "apoloexpsignersjrj.war", 
+          "enabled": true, 
+          "name": "apoloexpsignersjrj-201702161"
+        }, 
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }, 
+        "siga-5.3.11.2": {
+          "runtime-name": "siga.war", 
+          "enabled": true, 
+          "name": "siga-5.3.11.2"
+        }, 
+        "textowebsigner-201702161": {
+          "runtime-name": "textowebsigner.war", 
+          "enabled": true, 
+          "name": "textowebsigner-201702161"
+        }, 
+        "assijus-201702161": {
+          "runtime-name": "assijus.war", 
+          "enabled": true, 
+          "name": "assijus-201702161"
+        }, 
+        "apoloexpsignertrf2-201702161": {
+          "runtime-name": "apoloexpsignertrf2.war", 
+          "enabled": true, 
+          "name": "apoloexpsignertrf2-201702161"
+        }
+      }, 
+      "name": "siga", 
+      "socket-binding-group": "standard-sockets"
+    }, 
+    "sigadoc-auth": {
+      "profile": "sigadoc-ha", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }, 
+        "sigaidp-5.3.11.2": {
+          "runtime-name": "sigaidp.war", 
+          "enabled": true, 
+          "name": "sigaidp-5.3.11.2"
+        }
+      }, 
+      "name": "sigadoc-auth", 
+      "socket-binding-group": "ha-sockets"
+    }, 
+    "intelijus": {
+      "profile": "sigadoc", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "intelijus-20170316": {
+          "runtime-name": "intelijus.war", 
+          "enabled": false, 
+          "name": "intelijus-20170316"
+        }, 
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }, 
+        "intelijus-20170317": {
+          "runtime-name": "intelijus.war", 
+          "enabled": true, 
+          "name": "intelijus-20170317"
+        }
+      }, 
+      "name": "intelijus", 
+      "socket-binding-group": "standard-sockets"
+    }, 
+    "sigasr": {
+      "profile": "sigadoc", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "sqljdbc4.jar": {
+          "runtime-name": "sqljdbc4.jar", 
+          "enabled": true, 
+          "name": "sqljdbc4.jar"
+        }, 
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }, 
+        "sigasr-5.3.11.2": {
+          "runtime-name": "sigasr.war", 
+          "enabled": true, 
+          "name": "sigasr-5.3.11.2"
+        }
+      }, 
+      "name": "sigasr", 
+      "socket-binding-group": "standard-sockets"
+    }, 
+    "sigawf": {
+      "profile": "sigadoc", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "sqljdbc4.jar": {
+          "runtime-name": "sqljdbc4.jar", 
+          "enabled": true, 
+          "name": "sqljdbc4.jar"
+        }, 
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }, 
+        "sigawf-5.3.11.2": {
+          "runtime-name": "sigawf.war", 
+          "enabled": true, 
+          "name": "sigawf-5.3.11.2"
+        }
+      }, 
+      "name": "sigawf", 
+      "socket-binding-group": "standard-sockets"
+    }, 
+    "sigase": {
+      "profile": "sigadoc", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "sqljdbc4.jar": {
+          "runtime-name": "sqljdbc4.jar", 
+          "enabled": true, 
+          "name": "sqljdbc4.jar"
+        }, 
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }
+      }, 
+      "name": "sigase", 
+      "socket-binding-group": "standard-sockets"
+    }, 
+    "sigadoc-webwork": {
+      "profile": "sigadoc", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }, 
+        "sigaex-5.3.11.2": {
+          "runtime-name": "sigaex.war", 
+          "enabled": true, 
+          "name": "sigaex-5.3.11.2"
+        }
+      }, 
+      "name": "sigadoc-webwork", 
+      "socket-binding-group": "standard-sockets"
+    }, 
+    "sigadoc-play": {
+      "profile": "sigadoc", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }, 
+        "sigapp-5.3.11.2": {
+          "runtime-name": "sigapp.war", 
+          "enabled": true, 
+          "name": "sigapp-5.3.11.2"
+        }, 
+        "sigagc-5.3.11.2": {
+          "runtime-name": "sigagc.war", 
+          "enabled": true, 
+          "name": "sigagc-5.3.11.2"
+        }
+      }, 
+      "name": "sigadoc-play", 
+      "socket-binding-group": "standard-sockets"
+    }, 
+    "sav": {
+      "profile": "sav", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }, 
+        "sav-7.3.1": {
+          "runtime-name": "sav.war", 
+          "enabled": true, 
+          "name": "sav-7.3.1"
+        }
+      }, 
+      "name": "sav", 
+      "socket-binding-group": "standard-sockets"
+    }, 
+    "sigatp": {
+      "profile": "sigadoc", 
+      "socket-binding-port-offset": 0, 
+      "deployments": {
+        "sqljdbc4.jar": {
+          "runtime-name": "sqljdbc4.jar", 
+          "enabled": true, 
+          "name": "sqljdbc4.jar"
+        }, 
+        "ojdbc6.jar": {
+          "runtime-name": "ojdbc6.jar", 
+          "enabled": true, 
+          "name": "ojdbc6.jar"
+        }
+      }, 
+      "name": "sigatp", 
+      "socket-binding-group": "standard-sockets"
+    }
+  }, 
+  "name": "Siga-doc - Homologa\u00e7\u00e3o", 
+  "release-version": "7.3.3.Final-redhat-3", 
+  "host": {
+    "classea-sigadoc-dc": {
+      "name": "classea-sigadoc-dc", 
+      "release-version": "7.3.3.Final-redhat-3", 
+      "product-version": "6.2.3.GA", 
+      "release-codename": "Janus", 
+      "master": true, 
+      "product-name": "EAP"
+    }, 
+    "classee": {
+      "name": "classee", 
+      "release-version": "7.3.3.Final-redhat-3", 
+      "servers": [
+        "siga-auth-server01", 
+        "sigadoc-server02", 
+        "sav-server01", 
+        "sigatp-server01", 
+        "sigase-server01", 
+        "intelijus-server01", 
+        "sigawf-server01", 
+        "sigadoc-server01", 
+        "siga-server01", 
+        "sigasr-server01"
+      ], 
+      "product-version": "6.2.3.GA", 
+      "release-codename": "Janus", 
+      "master": false, 
+      "product-name": "EAP"
+    }, 
+    "classeg": {
+      "name": "classeg", 
+      "release-version": "7.3.3.Final-redhat-3", 
+      "servers": [
+        "siga-auth-server01", 
+        "sigadoc-server02", 
+        "sav-server01", 
+        "sigatp-server01", 
+        "sigase-server01", 
+        "intelijus-server01", 
+        "sigawf-server01", 
+        "sigadoc-server01", 
+        "siga-server01", 
+        "sigasr-server01"
+      ], 
+      "product-version": "6.2.3.GA", 
+      "release-codename": "Janus", 
+      "master": false, 
+      "product-name": "EAP"
+    }
+  }, 
+  "product-version": "6.2.3.GA", 
+  "release-codename": "Janus", 
+  "local-host-name": "classea-sigadoc-dc", 
+  "product-name": "EAP"
+}
