@@ -65,6 +65,10 @@ class Jbosscli(object):
         self.release_codename = data["release-codename"]
         self.release_version = data["release-version"]
 
+        self.system_properties = [
+            SystemProperty(name, p)for name, p in data["system-property"].items()
+        ]
+
         self.domain = data["launch-type"] == "DOMAIN"
         if self.domain:
             self.local_host_name = data["local-host-name"]
@@ -77,6 +81,7 @@ class Jbosscli(object):
             standalone_data["name"] = self.name + " - Standalone"
             standalone_data["master"] = True
             self.hosts = [Host(standalone_data, self)]
+
 
     def _fetch_host_data(self):
         hosts = self.invoke_cli({
@@ -341,3 +346,18 @@ class Deployment(object):
                 return None
 
             return result
+
+class SystemProperty(object):
+    """Represents a system property"""
+    def __init__(self, name, prop):
+        self.name = name
+        self.value = prop["value"].encode("utf-8")
+        self.boot_time = prop["boot-time"] if "boot-time" in prop else False
+
+    def __str__(self):
+        return "{0}={1}".format(self.name, self.value)
+
+    def __repr__(self):
+        return 'SystemProperty("{0}", {{"value": {1}, "boot-time": {2}}})'.format(
+            self.name, self.value, self.boot_time
+        )
