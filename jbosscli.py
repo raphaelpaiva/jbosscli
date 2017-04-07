@@ -65,9 +65,14 @@ class Jbosscli(object):
         self.release_codename = data["release-codename"]
         self.release_version = data["release-version"]
 
-        self.system_properties = [
-            SystemProperty(name, p)for name, p in data["system-property"].items()
-        ]
+        print data
+
+        if data.get("system-property") is not None:
+            self.system_properties = [
+                SystemProperty(name, p)for name, p in data["system-property"].items()
+            ]
+        else:
+            self.system_properties = []
 
         self.domain = data["launch-type"] == "DOMAIN"
         if self.domain:
@@ -145,10 +150,13 @@ class Host(object):
         self.controller = controller
 
         if not self.controller.domain:
-            self.deployments = [
-                Deployment(d, server_group=None, controller=controller)
-                for d in data["deployment"].values()
-            ]
+            if data.get("deployment") is not None:
+                self.deployments = [
+                    Deployment(d, server_group=None, controller=controller)
+                    for d in data["deployment"].values()
+                ]
+            else:
+                self.deployments = []
         else:
             self.deployments = None
 
@@ -269,10 +277,13 @@ class ServerGroup(object):
         self.socket_binding_port_offset = data["socket-binding-port-offset"]
         self.controller = controller
 
-        self.deployments = [
-            Deployment(d, self, controller=controller)
-            for d in data["deployment"].values()
-        ]
+        if data.get("deployment") is not None:
+            self.deployments = [
+                Deployment(d, self, controller=controller)
+                for d in data["deployment"].values()
+            ]
+        else:
+            self.deployments = []
 
 class Deployment(object):
     """Represents a Deployment in the server, enabled or not"""
