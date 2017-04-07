@@ -65,8 +65,6 @@ class Jbosscli(object):
         self.release_codename = data["release-codename"]
         self.release_version = data["release-version"]
 
-        print data
-
         if data.get("system-property") is not None:
             self.system_properties = [
                 SystemProperty(name, p)for name, p in data["system-property"].items()
@@ -357,7 +355,7 @@ class Deployment(object):
 
             return result
 
-class SystemProperty(object):
+class SystemProperty(object):n
     """Represents a system property"""
     def __init__(self, name, prop):
         self.name = name
