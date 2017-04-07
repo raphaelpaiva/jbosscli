@@ -355,7 +355,7 @@ class Deployment(object):
 
             return result
 
-class SystemProperty(object):n
+class SystemProperty(object):
     """Represents a system property"""
     def __init__(self, name, prop):
         self.name = name
