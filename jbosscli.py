@@ -196,7 +196,7 @@ class Instance(object):
         self.server_group_name = data["group"]
         self.status = data["status"]
         self.host = parent_host
-        self.datasources = self._read_datasources()
+        self._datasources = None
 
     def _read_datasources(self):
         command = {
@@ -233,6 +233,14 @@ class Instance(object):
     def running(self):
         """Return True if status is \"STARTED\""""
         return self.status == "STARTED"
+
+    def __getattr__(self, name):
+        if name == "datasources":
+            if self._datasources is None:
+                self._datasources = self._read_datasources()
+            return self._datasources
+        else:
+            raise AttributeError
 
 class DataSource(object):
     """Represents a datasource and some of its runtime metrics"""
