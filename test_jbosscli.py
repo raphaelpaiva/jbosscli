@@ -31,18 +31,18 @@ class TestJbosscli(unittest.TestCase):
             )
         )
     )
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
+    @patch("jbosscli.Jbosscli._fetch_controller_data", MagicMock())
     def test_invoke_cli_should_return_dict(self):
         expected_json_response = {}
 
-        actual_json_response = Jbosscli("", "a:b")._invoke_cli("")
+        actual_json_response = Jbosscli("", "a:b").invoke_cli("")
 
         self.assertEqual(actual_json_response, expected_json_response)
 
     @patch("jbosscli.requests.post", MagicMock(return_value=Struct(status_code=401, text=None)))
     def test_invoke_cli_401_statuscode__should_raise_CliError(self):
         with self.assertRaises(ServerError) as configmanager:
-            Jbosscli("", "a:b")._invoke_cli("")
+            Jbosscli("", "a:b").invoke_cli("")
 
         clierror = configmanager.exception
         self.assertEqual(clierror.msg, "Request responded a 401 code")
@@ -72,7 +72,7 @@ class TestJbosscli(unittest.TestCase):
         }
 
         with self.assertRaises(CliError) as cm:
-            Jbosscli("", "a:b")._invoke_cli("")
+            Jbosscli("", "a:b").invoke_cli("")
 
         clierror = cm.exception
         self.assertEqual(clierror.msg, "JBAS014792: Unknown attribute server-state")
@@ -90,7 +90,7 @@ class TestJbosscli(unittest.TestCase):
     )
     def test_invoke_cli_ParserError_should_raise_CliError(self):
         with self.assertRaises(CliError) as cm:
-            Jbosscli("", "a:b")._invoke_cli("")
+            Jbosscli("", "a:b").invoke_cli("")
 
         clierror = cm.exception
         self.assertEqual(clierror.msg, "Unknown error: Parser error")
@@ -99,243 +99,89 @@ class TestJbosscli(unittest.TestCase):
     @patch("jbosscli.requests.post", MagicMock(side_effect=Exception("OMG")))
     def test_invoke_cli_RequestError_should_raise_ServerError(self):
         with self.assertRaises(ServerError) as cm:
-            Jbosscli("", "a:b")._invoke_cli("")
+            Jbosscli("", "a:b").invoke_cli("")
 
         server_error = cm.exception
         self.assertEqual(server_error.msg, "Error requesting: OMG code")
 
-    @patch("jbosscli.requests.post", MagicMock())
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_read_used_heap_standalone(self):
+    def test_fetch_controller_data_standalone(self):
+        cli_response = {
+            "name": "a name for the server",
+            "product-name": "a product name",
+            "product-version": "1.2.3",
+            "release-codename": "Batman",
+            "release-version": "3.2.1GA",
+            "launch-type": "STANDALONE",
+        }
 
-        cli = Jbosscli("host:port", "a:b")
-        
-        cli._invoke_cli = MagicMock(
-            return_value={
-                "heap-memory-usage": {
-                    "used": "1024",
-                    "max": "2048"
+        with patch("jbosscli.Jbosscli.invoke_cli", MagicMock(return_value=cli_response)):
+            cli = Jbosscli("h:p", "u:p")
+            self.assertEqual(cli.name, cli_response["name"])
+            self.assertEqual(cli.release_codename, cli_response["release-codename"])
+            self.assertEqual(len(cli.system_properties), 0)
+            self.assertFalse(cli.domain)
+            self.assertEqual(len(cli.hosts), 1)
+            self.assertEqual(cli.hosts[0].name, "a name for the server - Standalone")
+
+    def test_fetch_controller_data_WithSystemProperties(self):
+        cli_response = {
+            "name": "a name for the server",
+            "product-name": "a product name",
+            "product-version": "1.2.3",
+            "release-codename": "Batman",
+            "release-version": "3.2.1GA",
+            "launch-type": "STANDALONE",
+            "system-property": {
+                "some.property" : {
+                    "value": "someValue!"
+                },
+                "other.property" : {
+                    "value": "otherValue!"
                 }
-            }
-        )
-        result = cli.read_used_heap()
-
-        cli._invoke_cli.assert_called_with({
-            "operation": "read-resource",
-            "include-runtime": "true",
-            "address": [
-                "core-service",
-                "platform-mbean",
-                "type",
-                "memory"
-            ]
-        })
-
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0], 0.00000095367431640625)
-        self.assertEqual(result[1], 0.0000019073486328125)
-
-    @patch("jbosscli.requests.post", MagicMock())
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_read_used_heap_domain_should_add_instance_address(self):
-
-        cli = Jbosscli("host:port", "a:b")
-        
-        cli._invoke_cli = MagicMock(
-            return_value={
-                "heap-memory-usage": {
-                    "used": "1024",
-                    "max": "2048"
-                }
-            }
-        )
-        result = cli.read_used_heap(host="somehost", server="someinstance")
-
-        cli._invoke_cli.assert_called_with({
-            "operation": "read-resource",
-            "include-runtime": "true",
-            "address": [
-                "host",
-                "somehost",
-                "server",
-                "someinstance",
-                "core-service",
-                "platform-mbean",
-                "type",
-                "memory"
-            ]
-        })
-
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0], 0.00000095367431640625)
-        self.assertEqual(result[1], 0.0000019073486328125)
-
-    @patch("jbosscli.requests.post", MagicMock())
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_read_used_heap_not_successful_should_raise_CliError(self):
-
-        error_response = {
-            "outcome": "failure",
-            "result": {
-                "error": "Some Error String."
             }
         }
 
-        cli = Jbosscli("host:port", "a:b")
-        
-        cli._invoke_cli = MagicMock(
-            return_value=error_response
-        )
+        with patch("jbosscli.Jbosscli.invoke_cli", MagicMock(return_value=cli_response)):
+            cli = Jbosscli("h:p", "u:p")
+            self.assertEqual(cli.name, cli_response["name"])
+            self.assertEqual(cli.release_codename, cli_response["release-codename"])
+            self.assertFalse(cli.domain)
+            self.assertEqual(len(cli.system_properties), 2)
+            self.assertTrue(
+                jbosscli.SystemProperty(
+                    "some.property",
+                    {"value": "someValue!"}
+                ) in cli.system_properties
+            )
+            self.assertTrue(
+                jbosscli.SystemProperty(
+                    "other.property",
+                    {"value": "otherValue!"}
+                ) in cli.system_properties
+            )
+            self.assertEqual(len(cli.hosts), 1)
 
-        with self.assertRaises(CliError) as cm:
-            cli.read_used_heap()
+    @patch("jbosscli.Jbosscli._fetch_host_data", MagicMock())
+    @patch("jbosscli.Jbosscli._fetch_server_group_data", MagicMock())
+    def test_fetch_controller_data_domain(self):
+        cli_response = {
+            "name": "a name for the server",
+            "product-name": "a product name",
+            "product-version": "1.2.3",
+            "release-codename": "Batman",
+            "release-version": "3.2.1GA",
+            "launch-type": "DOMAIN",
+            "local-host-name": "some.host.com"
+        }
 
-        cli._invoke_cli.assert_called_with({
-            "operation": "read-resource",
-            "include-runtime": "true",
-            "address": [
-                "core-service",
-                "platform-mbean",
-                "type",
-                "memory"
-            ]
-        })
-
-        cli_error = cm.exception
-        self.assertEqual(cli_error.msg, error_response)
-
-    @patch("jbosscli.requests.post", MagicMock())
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_read_used_heap_successful_no_heap_information_should_raise_CliError(self):
-
-        cli = Jbosscli("host:port", "a:b")
-
-        cli._invoke_cli = MagicMock(
-            side_effect=CliError("Some Error String.", {"error": "Some Error String."})
-        )
-
-        with self.assertRaises(CliError) as cm:
-            cli.read_used_heap()
-
-        cli._invoke_cli.assert_called_with({
-            "operation": "read-resource",
-            "include-runtime": "true",
-            "address": [
-                "core-service",
-                "platform-mbean",
-                "type",
-                "memory"
-            ]
-        })
-
-        cli_error = cm.exception
-        self.assertEqual(cli_error.msg, "Some Error String.")
-
-    @patch("jbosscli.requests.post", MagicMock())
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_restart_standalone(self):
-        cli = Jbosscli("host:port", "a:b")
-
-
-        cli._invoke_cli = MagicMock(
-            return_value={"outcome": "success"}
-        )
-
-        cli.restart()
-
-        cli._invoke_cli.assert_called_with({
-            "operation": "shutdown",
-            "restart": "true"
-        })
-
-    @patch("jbosscli.requests.post", MagicMock())
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_restart_domain(self):
-        cli = Jbosscli("host:port", "a:b")
-
-        cli._invoke_cli = MagicMock(
-            return_value={"outcome": "success"}
-        )
-
-        cli.restart(host="somehost", server="someinstance")
-
-        cli._invoke_cli.assert_called_with({
-            "operation": "restart",
-            "address": [
-                "host",
-                "somehost",
-                "server",
-                "someinstance"
-            ]
-        })
-
-    @patch("jbosscli.requests.post", MagicMock())
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_list_domain_hosts(self):
-        cli = Jbosscli("host:port", "a:b")
-
-        cli._invoke_cli = MagicMock(
-            return_value=[
-                "host1",
-                "host2"
-            ]
-        )
-
-        hosts = cli.list_domain_hosts()
-
-        cli._invoke_cli.assert_called_with({
-            "operation": "read-children-names",
-            "child-type": "host"
-        })
-
-        self.assertEqual(hosts, ["host1", "host2"])
-
-    @patch("jbosscli.requests.post", MagicMock())
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_list_servers_success(self):
-        cli = Jbosscli("host:port", "a:b")
-
-        cli._invoke_cli = MagicMock(
-            return_value=[
-                "instance1",
-                "instance2"
-            ]
-        )
-
-        hosts = cli.list_servers("somehost")
-
-        cli._invoke_cli.assert_called_with({
-            "operation": "read-children-names",
-            "child-type": "server",
-            "address": [
-                "host", "somehost"
-            ]
-        })
-
-        self.assertEqual(hosts, ["instance1", "instance2"])
-
-    @patch("jbosscli.requests.post", MagicMock())
-    @patch("jbosscli.Jbosscli._read_attributes", MagicMock())
-    def test_list_servers_failure(self):
-        cli = Jbosscli("host:port", "a:b")
-
-        cli._invoke_cli = MagicMock(
-            side_effect=CliError("Some Error String.", {"error": "Some Error String."})
-        )
-
-        with self.assertRaises(CliError) as cm:
-            hosts = cli.list_servers("somehost")
-
-        cli._invoke_cli.assert_called_with({
-            "operation": "read-children-names",
-            "child-type": "server",
-            "address": [
-                "host", "somehost"
-            ]
-        })
-
-        cli_error = cm.exception
-        self.assertEqual(cli_error.msg, "Some Error String.")
+        with patch("jbosscli.Jbosscli.invoke_cli", MagicMock(return_value=cli_response)):
+            cli = Jbosscli("h:p", "u:p")
+            self.assertEqual(cli.name, cli_response["name"])
+            self.assertEqual(cli.release_codename, cli_response["release-codename"])
+            self.assertTrue(cli.domain)
+            self.assertEqual(cli.local_host_name, "some.host.com") 
+            cli._fetch_host_data.assert_called_once_with()
+            cli._fetch_server_group_data.assert_called_once_with()
 
 if __name__ == '__main__':
     unittest.main()

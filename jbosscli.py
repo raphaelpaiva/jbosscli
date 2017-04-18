@@ -377,3 +377,8 @@ class SystemProperty(object):
         return 'SystemProperty("{0}", {{"value": {1}, "boot-time": {2}}})'.format(
             self.name, self.value, self.boot_time
         )
+
+    def __eq__(self, other):
+        return self.name == other.name and \
+               self.value == other.value and \
+               self.boot_time == other.boot_time
