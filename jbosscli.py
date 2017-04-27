@@ -216,7 +216,7 @@ class Instance(object):
         datasources = []
         for name, ds_data in resp.iteritems():
             ds_data["name"] = name
-            datasources.append(DataSource(ds_data))
+            datasources.append(DataSource(ds_data, self))
 
         return datasources
 
@@ -244,8 +244,9 @@ class Instance(object):
 
 class DataSource(object):
     """Represents a datasource and some of its runtime metrics"""
-    def __init__(self, data):
+    def __init__(self, data, parent_instance=None):
         self.name = data["name"]
+        self.instance = parent_instance
         self.connection_url = data["connection-url"]
         self.jndi_name = data["jndi-name"]
         self.driver_class = data["driver-class"]
@@ -266,6 +267,19 @@ class DataSource(object):
             self.in_use_connections = pool_stats["InUseCount"]
             self.max_used_connections = pool_stats["MaxUsedCount"]
             self.max_wait_time = pool_stats["MaxWaitTime"]
+
+    def test_connection_in_pool(self):
+        command = {
+            "operation": "test-connection-in-pool",
+            "address": [
+                "host", self.instance.host.name,
+                "server", self.instance.name,
+                "subsystem", "datasources",
+                "data-source", self.name
+            ]
+        }
+
+        return self.instance.host.controller.invoke_cli(command)
 
     def __str__(self):
         return self.name
