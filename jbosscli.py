@@ -85,6 +85,13 @@ class Jbosscli(object):
             standalone_data["master"] = True
             self.hosts = [Host(standalone_data, self)]
 
+        if data.get("deployment") is not None:
+            self.deployments = [
+                Deployment(d, server_group=None, controller=self)
+                for d in data["deployment"].values()
+            ]
+        else:
+            self.deployments = []
 
     def _fetch_host_data(self):
         hosts = self.invoke_cli({
@@ -146,17 +153,6 @@ class Host(object):
         self.master = data["master"]
         self.status = data["host-state"] if "host-state" in data else None
         self.controller = controller
-
-        if not self.controller.domain:
-            if data.get("deployment") is not None:
-                self.deployments = [
-                    Deployment(d, server_group=None, controller=controller)
-                    for d in data["deployment"].values()
-                ]
-            else:
-                self.deployments = []
-        else:
-            self.deployments = None
 
         if not self.master:
             self.instances = [
@@ -310,7 +306,7 @@ class Deployment(object):
     def __init__(self, data, server_group, controller=None):
         self.name = data["name"]
         self.runtime_name = data["runtime-name"]
-        self.enabled = data["enabled"]
+        self.enabled = data["enabled"] if "enabled" in data else None
         self.controller = controller
         self.server_group = server_group
 
@@ -329,8 +325,10 @@ class Deployment(object):
 
     def __eq__(self, other):
         return self.name == other.name and \
-        self.runtime_name == other.runtime_name and \
-        self.enabled == other.enabled
+        self.runtime_name == other.runtime_name
+
+    def __hash__(self):
+        return hash((self.name, self.runtime_name))
 
     def get_context_root(self):
         """Scan the server for the context root of the deployment if it is enabled"""
